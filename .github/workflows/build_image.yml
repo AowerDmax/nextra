@@ -27,13 +27,7 @@ jobs:
       - name: Install dependencies with pnpm
         run: pnpm install
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: all
-
       - name: Set up Docker Buildx
-        id: buildx
         uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
@@ -42,11 +36,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Docker Buildx
-        run: |
-          docker buildx create --use --name mybuilder
-          docker buildx inspect mybuilder --bootstrap
 
       - name: Build and push Docker images
         run: |
@@ -61,7 +50,7 @@ jobs:
       - name: Post Build Info
         run: |
           echo "🎉 Docker images for $REPO_NAME have been built and pushed successfully!"
-          echo "🖥️  Platforms: linux/amd64"
+          echo "🖥️  Platform: linux/amd64"
           echo "📝  Tags:"
           echo "     - ghcr.io/$REPO_OWNER/$REPO_NAME:latest"
           echo "     - ghcr.io/$REPO_OWNER/$REPO_NAME:${{ github.sha }}"
