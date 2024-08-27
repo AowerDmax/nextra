@@ -1,0 +1,288 @@
+---
+title: 爬虫简史,简单的HTTP模拟
+date: 2024/08/22
+description: 爬虫简史：从简单到复杂的进化之路，简单的HTTP模拟
+tags:
+  - crawler
+  - BeautifulSoup
+  - http模拟
+ogImage: /images/blog/Har.webp
+authorid: aower
+---
+
+> 引言
+
+在本文中,我将根据我已有的 `Python 爬虫` 经验, 简要编写三篇博文, 大概是涉及`简单的HTTP模拟`,直接抓取 `HTML` 文件并使用 `BeautifulSoup` 进行数据解析; `Selenium` 模拟 `JavaScript` 执行获取动态内容; `动态 IP 池` 技术, `设备指纹` 模拟，自动化通过 `人机认证`。
+
+这三个部分构成了爬虫技术的基础。当然爬虫技术很高深,`分布式爬虫`、`深度学习在爬虫中的应用`、`移动应用爬虫`、`大规模爬虫系统`等还有待编者去学习.
+
+
+本文作为爬虫简史系列的第一部分，主要介绍了以下内容：
+
+1. **爬虫的早期历史**：
+   - 介绍了早期网络爬虫的简单性和有效性。
+   - 描述了最初的网页结构主要由静态HTML组成。
+
+2. **基本的HTTP模拟**：
+   - 解释了如何使用Python的`requests`库发送HTTP请求。
+   - 展示了如何使用`BeautifulSoup`库解析HTML内容。
+
+3. **BeautifulSoup的详细使用**：
+   - 介绍了多种定位和获取HTML元素的方法。
+   - 提供了实际的代码示例，如通过标签名、属性、CSS选择器查找元素。
+
+4. **HTTP模拟的原理**：
+   - 详细解释了HTTP请求的构成和过程。
+   - 描述了从建立TCP连接到解析响应的整个流程。
+
+5. **进阶的HTTP请求技巧**：
+   - 讲解了设置请求头（Headers）的重要性和方法。
+   - 解释了如何处理需要认证的请求，包括使用cookies和tokens。
+
+6. **实际爬虫案例**：
+   - 提供了一个爬取微博帖子的实例。
+   - 展示了如何综合运用所学知识来构建一个实际的爬虫。
+
+7. **爬虫伦理与法律考虑**：
+   - 提醒读者在使用爬虫时需要遵守网站的使用条款和相关法律法规。
+
+这篇文章为读者奠定了网络爬虫的基础知识，从最简单的HTTP请求开始，逐步深入到更复杂的爬虫技术。它不仅提供了理论知识，还通过实际的代码示例和案例研究，帮助读者理解如何将这些概念应用到实践中。
+
+在接下来的系列文章中，我们将探讨更高级的爬虫技术，如使用[Selenium模拟JavaScript执行、处理动态内容](/blog/crawler_1)、以及[应对更复杂的反爬虫措施](/blog/crawler_2)。
+
+# 爬虫简史：从简单到复杂的进化之路，简单的HTTP模拟
+
+在很久以前，网络爬虫技术相对简单，不需要多高的技术水平就可以轻松获取网页数据。那时，许多网站没有复杂的防爬措施，只需要模拟基本的HTTP协议就能完成大部分的数据抓取任务。本文将从早期的简单爬虫开始，逐步介绍爬虫技术的发展历程及其应对复杂反爬策略的演变。
+
+## 早期的爬虫技术：简单的HTTP模拟
+
+在早期的互联网时代，网站主要是由静态HTML页面组成的。这些页面没有复杂的JavaScript动态渲染，爬虫只需要发送HTTP请求并解析返回的HTML内容即可。
+
+```python
+import requests
+from bs4 import BeautifulSoup
+
+url = 'https://baidu.com'
+response = requests.get(url)
+soup = BeautifulSoup(response.content, 'html.parser')
+
+# 抓取网页中的所有链接
+for link in soup.find_all('a'):
+    print(link.get('href'))
+#  output 
+#http://news.baidu.com
+
+# http://www.hao123.com
+
+# http://map.baidu.com
+
+# http://v.baidu.com
+
+# http://tieba.baidu.com
+
+# http://www.baidu.com/bdorz/login.gif?login&tpl=mn&u=http%3A%2F%2Fwww.baidu.com%2f%3fbdorz_come%3d1
+
+# //www.baidu.com/more/
+
+# http://home.baidu.com
+
+# http://ir.baidu.com
+
+# http://www.baidu.com/duty/
+
+# http://jianyi.baidu.com/
+```
+
+在上述示例中，使用了`requests`库来发送HTTP请求，使用`BeautifulSoup`库来解析HTML内容。这种方式非常简单且高效，只要能够解析出HTML结构，就能提取出网页中的各种数据。
+
+## BeautifulSoup的使用：如何定位获取所需内容和标签
+
+BeautifulSoup是一个强大的HTML解析库，它提供了多种方法来定位和获取我们需要的内容。以下是一些常用的方法：
+
+1. 通过标签名查找：
+```python
+# 找到第一个<p>标签
+first_paragraph = soup.find('p')
+
+# 找到所有<p>标签
+all_paragraphs = soup.find_all('p')
+```
+
+2. 通过属性查找：
+```python
+# 找到id为"content"的div
+content_div = soup.find('div', id='content')
+
+# 找到所有class为"article"的元素
+articles = soup.find_all(class_='article')
+```
+
+3. 通过CSS选择器查找：
+```python
+# 使用CSS选择器找到所有class为"title"的<h2>标签
+titles = soup.select('h2.title')
+```
+
+4. 获取标签内容：
+```python
+# 获取标签的文本内容
+text = soup.find('p').text
+
+# 获取标签的属性值
+href = soup.find('a')['href']
+```
+
+5. 遍历DOM树：
+```python
+# 遍历所有子节点
+for child in soup.recursiveChildGenerator():
+    if child.name:
+        print(child.name)
+```
+
+## 简单的HTTP模拟原理
+
+HTTP模拟的核心原理是构造符合HTTP协议的请求，并解析服务器返回的响应。以下是一个简单的HTTP GET请求的过程：
+
+1. 建立TCP连接：爬虫首先需要与目标服务器建立TCP连接。
+
+2. 构造HTTP请求头：包括请求方法（GET、POST等）、请求的URL、HTTP版本等信息。
+```
+GET /index.html HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+```
+
+3. 发送请求：将构造好的HTTP请求通过TCP连接发送给服务器。
+
+4. 接收响应：服务器处理请求后，会返回一个HTTP响应，包括状态码、响应头和响应体。
+
+5. 解析响应：爬虫程序解析HTTP响应，提取需要的数据。
+
+在Python中，`requests`库封装了这些底层的HTTP操作，使得发送HTTP请求变得非常简单：
+
+```python
+import requests
+
+response = requests.get('https://example.com')
+print(response.status_code)  # 打印状态码
+print(response.headers)  # 打印响应头
+print(response.text)  # 打印响应体
+```
+
+
+## 进阶的HTTP请求技巧
+
+尽管简单的HTTP请求在很多情况下已经足够，但在实际爬虫开发中，我们常常需要更复杂的设置来模拟真实的浏览器行为或访问需要认证的内容。
+
+### 设置请求头（Headers）
+
+设置自定义的请求头是绕过基本反爬虫措施的重要手段。许多网站会检查请求头来确定请求是否来自真实的浏览器。以下是一个设置请求头的例子：
+
+```python
+import requests
+
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Referer': 'https://www.google.com/'
+}
+
+response = requests.get('https://example.com', headers=headers)
+```
+
+为什么要这么做？
+1. User-Agent: 告诉服务器请求来自哪种浏览器，有助于绕过针对爬虫的User-Agent检查。
+2. Accept: 指定客户端能够接收的内容类型。
+3. Accept-Language: 指定客户端期望的语言。
+4. Referer: 告诉服务器请求来自哪个页面，有些网站会检查这个字段来防止盗链。
+
+### 处理需要认证的请求
+
+对于需要登录才能访问的内容，我们通常需要在请求中包含身份验证信息。这可能是cookie、access token或其他形式的凭证。
+
+```python
+import requests
+
+# 使用cookie进行认证
+cookies = {'session_id': '1234567890abcdef'}
+response = requests.get('https://example.com/protected', cookies=cookies)
+
+# 使用headers中的token进行认证
+headers = {
+    'Authorization': 'Bearer abcdefghijklmnopqrstuvwxyz',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+}
+response = requests.get('https://example.com/api', headers=headers)
+```
+
+为什么要这么做？
+- 很多网站的内容只对已登录用户可见。
+- API often require authentication to prevent unauthorized access and abuse.
+- 包含身份验证信息可以模拟真实用户的行为，减少被检测为爬虫的可能性。
+
+## 实际例子：爬取微博帖子
+
+下面是一个简化的微博帖子爬取例子，展示了如何处理需要认证的请求和解析JSON响应：
+
+```python
+import requests
+from bs4 import BeautifulSoup
+import json
+
+# 设置headers
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    'Referer': 'https://weibo.com/',
+    'X-Requested-With': 'XMLHttpRequest'
+}
+
+# 设置cookies（这里需要替换为实际的登录cookie）
+cookies = {
+    'SUB': 'your_sub_cookie',
+    'SUBP': 'your_subp_cookie',
+    # 其他必要的cookie...
+}
+
+# 微博API URL（需要替换为实际的API地址）
+url = 'https://weibo.com/ajax/statuses/mymblog?uid=1669879400&page=1&feature=0'
+
+# 发送请求
+response = requests.get(url, headers=headers, cookies=cookies)
+
+# 检查请求是否成功
+if response.status_code == 200:
+    # 解析JSON响应
+    data = json.loads(response.text)
+    
+    # 提取帖子内容
+    for post in data['data']['list']:
+        print(f"帖子ID: {post['id']}")
+        print(f"发布时间: {post['created_at']}")
+        print(f"内容: {post['text_raw']}")
+        print('-' * 50)
+else:
+    print(f"请求失败，状态码：{response.status_code}")
+```
+
+这个例子展示了：
+1. 如何设置复杂的headers来模拟浏览器行为。
+2. 如何使用cookies进行身份验证。
+3. 如何发送GET请求并处理JSON响应。
+4. 如何提取和打印需要的信息。
+
+注意：这个例子是简化的版本，实际的微博爬虫可能需要处理分页、错误重试、IP代理等更复杂的情况。此外，在使用爬虫时，请务必遵守网站的使用条款和法律法规。
+
+
+
+## 结语
+
+早期的爬虫技术主要依赖于简单的HTTP模拟和HTML解析。这种方法在处理静态网页时非常有效。然而，随着Web技术的发展，网站开始使用更复杂的技术来呈现内容和防止爬虫。在下一篇文章中，我们将探讨如何使用Selenium来模拟JavaScript执行，以获取动态渲染的内容。
+
+
+
+
+

@@ -1,0 +1,738 @@
+---
+title: LSP：调用Clangd对C语言进行分析
+date: 2024/08/20
+description: JSON-RPC讲解,使用python调用Clangd对C语言进行分析
+tags:
+  - LSP
+  - LLM能力扩展
+  - JSON-RPC
+  - Clangd
+ogImage: /images/blog/LSP.webp
+authorid: aower
+---
+
+> 引言
+
+首先我们先对先对 `JSON-RPC` 进行一个简单的介绍,重点编写了JSON-RPC 2.0的`request`和`response`格式以及`JSON-RPC`建立连接和关闭连接的内容. 然后本文将提供一份`python调用Clangd对C语言进行分析 `的源码, 并提供相关解析.
+
+# Json-RPC 详解
+
+## 1. JSON-RPC 2.0概述
+
+在Language Server Protocol (LSP)中，JSON-RPC 2.0用于客户端（通常是IDE或编辑器）和语言服务器之间的通信。了解其请求和响应格式对于实现LSP至关重要。
+
+## 2. 请求格式
+
+JSON-RPC 2.0的请求对象在LSP中有以下结构：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 请求标识符,
+  "method": "方法名",
+  "params": 参数对象
+}
+```
+
+- `jsonrpc`: 固定值"2.0"，表示使用的协议版本。
+- `id`: 请求的唯一标识符，用于匹配响应。可以是数字或字符串。
+- `method`: 调用的LSP方法名。
+- `params`: 包含方法参数的对象。
+
+### LSP请求示例：文本同步
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///path/to/file.py",
+      "version": 2
+    },
+    "contentChanges": [
+      {
+        "range": {
+          "start": { "line": 5, "character": 10 },
+          "end": { "line": 5, "character": 15 }
+        },
+        "text": "newText"
+      }
+    ]
+  }
+}
+```
+
+这个例子展示了一个文本改变通知，它告诉服务器文档的内容已经改变。
+
+## 3. 响应格式
+
+JSON-RPC 2.0的响应对象在LSP中有以下结构：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 请求标识符,
+  "result": 结果对象,
+  "error": 错误对象(可选)
+}
+```
+
+- `jsonrpc`: 同请求，固定值"2.0"。
+- `id`: 对应请求的标识符。
+- `result`: 如果调用成功，包含返回的结果。
+- `error`: 如果调用失败，包含错误信息。
+
+### LSP响应示例：代码补全
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "isIncomplete": false,
+    "items": [
+      {
+        "label": "println",
+        "kind": 3,
+        "detail": "println(message: String)",
+        "documentation": "Prints a line of text to the standard output.",
+        "insertText": "println($0)"
+      },
+      {
+        "label": "print",
+        "kind": 3,
+        "detail": "print(message: String)",
+        "documentation": "Prints text to the standard output without a line break.",
+        "insertText": "print($0)"
+      }
+    ]
+  }
+}
+```
+
+这个例子展示了对代码补全请求的响应，提供了可能的补全项。
+
+## 4. 错误响应格式
+
+当出现错误时，响应会包含一个错误对象：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 请求标识符,
+  "error": {
+    "code": 错误代码,
+    "message": "错误描述",
+    "data": 额外的错误数据(可选)
+  }
+}
+```
+
+### LSP错误响应示例
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32602,
+    "message": "Invalid params",
+    "data": {
+      "retry": false
+    }
+  }
+}
+```
+
+这个例子展示了一个参数无效的错误响应。
+
+## 5. LSP特定的请求和响应类型
+
+LSP定义了许多特定的请求和响应类型，以支持各种语言特性。以下是一些常见的例子：
+
+### 5.1 初始化请求
+
+客户端发送给服务器的第一个请求：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "processId": 1234,
+    "rootUri": "file:///path/to/project",
+    "capabilities": {
+      "textDocument": {
+        "completion": {
+          "dynamicRegistration": true,
+          "completionItem": {
+            "snippetSupport": true
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### 5.2 定义查找请求
+
+查找符号定义的请求：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "textDocument/definition",
+  "params": {
+    "textDocument": {
+      "uri": "file:///path/to/file.py"
+    },
+    "position": {
+      "line": 10,
+      "character": 15
+    }
+  }
+}
+```
+
+### 5.3 诊断通知
+
+服务器发送给客户端的诊断信息：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///path/to/file.py",
+    "diagnostics": [
+      {
+        "range": {
+          "start": { "line": 5, "character": 0 },
+          "end": { "line": 5, "character": 10 }
+        },
+        "severity": 1,
+        "message": "Undefined variable 'foo'"
+      }
+    ]
+  }
+}
+```
+
+## 6. 结论
+
+在LSP中，JSON-RPC 2.0的请求和响应格式提供了一个强大而灵活的通信机制。通过这种标准化的格式，客户端和服务器可以有效地交换各种类型的信息，从简单的文本更改到复杂的代码分析结果。理解这些格式对于实现LSP客户端和服务器，以及调试LSP通信问题至关重要。
+
+# python调用Clangd对C语言进行分析
+
+## 代码
+
+需要分析的`C语言`代码
+
+```C filename="main.c"
+#include <stdio.h>
+
+void hello() { // line = 2, character = 5
+    printf("Hello, World!\n");
+}
+
+int main() {   // line = 6, character = 5
+    hello();   // line = 7, character = 5
+    return 0;
+}
+
+```
+
+### python调用Clangd对C语言进行分析
+
+```python filename="lsp_client.py"
+import json
+import subprocess
+import os
+import logging
+import time
+import threading
+import queue
+
+logging.basicConfig(filename='lsp_client.log', level=logging.DEBUG, 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
+class LSPClient:
+    def __init__(self, compile_commands_dir=None, extra_args=None):
+        self.lsp_process = None
+        self.request_queue = queue.Queue()
+        self.response_queue = queue.Queue()
+        self.next_id = 1
+        self.running = False
+        self.pending_requests = {}
+        self.compile_commands_dir = compile_commands_dir
+        self.extra_args = extra_args or []
+
+
+    def start(self):
+        logging.info("Starting LSP server...")
+        cmd = ["clangd", "--log=verbose"]
+        if self.compile_commands_dir:
+            cmd.append(f"--compile-commands-dir={self.compile_commands_dir}")
+        cmd.extend(self.extra_args)
+        
+        self.lsp_process = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            cwd=os.getcwd()
+        )
+        logging.info(f"LSP server started with PID: {self.lsp_process.pid}")
+        
+        self.running = True
+        threading.Thread(target=self._read_stdout, daemon=True).start()
+        threading.Thread(target=self._read_stderr, daemon=True).start()
+        threading.Thread(target=self._write_stdin, daemon=True).start()
+
+    def stop(self):
+        logging.info("Stopping LSP server...")
+        self.running = False
+        if self.lsp_process:
+            self._send_shutdown_request()
+            self.lsp_process.terminate()
+            self.lsp_process.wait(timeout=5)
+        logging.info("LSP server stopped.")
+
+    def _send_shutdown_request(self):
+        shutdown_request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "shutdown"
+        }
+        self._send_request(shutdown_request)
+        # Wait for shutdown response
+        time.sleep(1)
+        exit_notification = {
+            "jsonrpc": "2.0",
+            "method": "exit"
+        }
+        self._send_request(exit_notification)
+
+    def _read_stdout(self):
+        while self.running:
+            try:
+                headers = self._read_headers(self.lsp_process.stdout)
+                if 'Content-Length' in headers:
+                    content_length = int(headers['Content-Length'])
+                    content = self.lsp_process.stdout.read(content_length)
+                    self._handle_response(content)
+            except Exception as e:
+                logging.error(f"Error reading stdout: {str(e)}")
+
+    def _read_stderr(self):
+        for line in self.lsp_process.stderr:
+            logging.debug(f"LSP server log: {line.strip()}")
+
+    def _write_stdin(self):
+        while self.running:
+            try:
+                request = self.request_queue.get(timeout=0.1)
+                self._send_request(request)
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logging.error(f"Error writing to stdin: {str(e)}")
+
+    def _read_headers(self, stream):
+        headers = {}
+        while True:
+            line = stream.readline().strip()
+            if not line:
+                break
+            key, value = line.split(': ')
+            headers[key] = value
+        return headers
+
+    def _send_request(self, request):
+        content = json.dumps(request)
+        headers = f"Content-Length: {len(content)}\r\n\r\n"
+        full_message = headers + content
+        logging.debug(f"Sending message: {full_message}")
+        self.lsp_process.stdin.write(full_message)
+        self.lsp_process.stdin.flush()
+
+    def _handle_response(self, content):
+        logging.debug(f"Received response: {content}")
+        response = json.loads(content)
+        if 'id' in response:
+            request_id = response['id']
+            if request_id in self.pending_requests:
+                self.pending_requests[request_id].put(response)
+            else:
+                logging.warning(f"Received response for unknown request id: {request_id}")
+        elif 'method' in response:
+            # Handle server notifications
+            if response['method'] == 'textDocument/publishDiagnostics':
+                logging.info(f"Diagnostics: {response['params']}")
+
+    def _send_request_and_wait(self, request, timeout=5):
+        request_id = request['id']
+        response_queue = queue.Queue()
+        self.pending_requests[request_id] = response_queue
+        self.request_queue.put(request)
+        try:
+            return response_queue.get(timeout=timeout)
+        except queue.Empty:
+            logging.error(f"Timeout waiting for response to request {request_id}")
+            return None
+        finally:
+            del self.pending_requests[request_id]
+
+    def initialize(self):
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "initialize",
+            "params": {
+                "processId": os.getpid(),
+                "rootUri": f"file://{os.getcwd()}",
+                "capabilities": {}
+            }
+        }
+        return self._send_request_and_wait(request)
+
+    def initialized(self):
+        notification = {
+            "jsonrpc": "2.0",
+            "method": "initialized",
+            "params": {}
+        }
+        self.request_queue.put(notification)
+
+    def did_open(self, file_path):
+        with open(file_path, 'r') as file:
+            file_content = file.read()
+
+        notification = {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": f"file://{file_path}",
+                    "languageId": "c",
+                    "version": 1,
+                    "text": file_content
+                }
+            }
+        }
+        self.request_queue.put(notification)
+
+    def document_symbols(self, file_path):
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "textDocument/documentSymbol",
+            "params": {
+                "textDocument": {"uri": f"file://{file_path}"}
+            }
+        }
+        return self._send_request_and_wait(request)
+
+    def definition(self, file_path, line, character):
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": f"file://{file_path}"},
+                "position": {"line": line, "character": character}
+            }
+        }
+        return self._send_request_and_wait(request)
+
+    def references(self, file_path, line, character):
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": f"file://{file_path}"},
+                "position": {"line": line, "character": character},
+                "context": {"includeDeclaration": True}
+            }
+        }
+        return self._send_request_and_wait(request)
+
+    def _get_next_id(self):
+        id = self.next_id
+        self.next_id += 1
+        return id
+
+def main():
+    client = LSPClient(compile_commands_dir=".", extra_args=["--query-driver=/usr/bin/clang"])
+    try:
+        client.start()
+        
+        init_response = client.initialize()
+        if not init_response:
+            raise Exception("Failed to initialize LSP server")
+        logging.info(f"Initialize response: {init_response}")
+        
+        client.initialized()
+        
+        file_path = os.path.join(os.getcwd(), 'main.c')
+        client.did_open(file_path)
+        
+        time.sleep(2)  # Give some time for the server to process the file
+        
+        symbols_response = client.document_symbols(file_path)
+        logging.info(f"Document Symbols response: {symbols_response}")
+        
+        definition_response = client.definition(file_path, 7, 4)  # Assuming 'hello()' is at line 7, character 4
+        logging.info(f"Definition response: {definition_response}")
+        
+        references_response = client.references(file_path, 2, 5)  # Assuming 'hello' function is defined at line 2, character 5
+        logging.info(f"References response: {references_response}")
+        
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}")
+    finally:
+        client.stop()
+
+if __name__ == "__main__":
+    main()
+```
+
+## 日志分析
+
+
+以下是日志内容的中文解释：
+
+1. **启动LSP服务器：**
+   ```
+   2024-08-17 16:55:12,364 - INFO - 正在启动LSP服务器...
+   2024-08-17 16:55:12,367 - INFO - LSP服务器已启动，进程ID: 89665
+   ```
+
+2. **发送初始化请求：**
+   ```
+   2024-08-17 16:55:12,367 - DEBUG - 发送消息：内容长度：155
+   {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"processId": 89664, "rootUri": "file:///Users/aower/python/lsp_client", "capabilities": {}}}
+   ```
+
+3. **LSP服务器日志：**
+   ```
+   2024-08-17 16:55:12,414 - DEBUG - LSP服务器日志：I[16:55:12.412] Apple clangd 版本 15.0.0 (clang-1500.1.0.2.5)
+   2024-08-17 16:55:12,414 - DEBUG - LSP服务器日志：I[16:55:12.414] 功能：mac+xpc
+   2024-08-17 16:55:12,415 - DEBUG - LSP服务器日志：I[16:55:12.414] 进程ID：89665
+   2024-08-17 16:55:12,416 - DEBUG - LSP服务器日志：I[16:55:12.416] 工作目录：/Users/aower/python/lsp_client
+   2024-08-17 16:55:12,416 - DEBUG - LSP服务器日志：I[16:55:12.416] 参数[0]: /Library/Developer/CommandLineTools/usr/bin/clangd
+   2024-08-17 16:55:12,416 - DEBUG - LSP服务器日志：I[16:55:12.416] 参数[1]: --log=verbose
+   2024-08-17 16:55:12,416 - DEBUG - LSP服务器日志：I[16:55:12.416] 参数[2]: --compile-commands-dir=.
+   2024-08-17 16:55:12,417 - DEBUG - LSP服务器日志：I[16:55:12.416] 参数[3]: --query-driver=/usr/bin/clang
+   ```
+
+4. **读取用户配置文件并启动LSP通信：**
+   ```
+   2024-08-17 16:55:12,418 - DEBUG - LSP服务器日志：V[16:55:12.417] 用户配置文件位于 /Users/aower/Library/Preferences/clangd/config.yaml
+   2024-08-17 16:55:12,422 - DEBUG - LSP服务器日志：I[16:55:12.422] 开始通过stdin/stdout启动LSP
+   ```
+
+5. **LSP通信初始化：**
+   ```
+   2024-08-17 16:55:12,430 - DEBUG - LSP服务器日志：V[16:55:12.428] <<< {"id":1,"jsonrpc":"2.0","method":"initialize","params":{"capabilities":{},"processId":89664,"rootUri":"file:///Users/aower/python/lsp_client"}}
+   2024-08-17 16:55:12,432 - DEBUG - LSP服务器日志：I[16:55:12.432] <-- 初始化(1)
+   ```
+
+6. **LSP服务器初始化响应：**
+   ```
+   2024-08-17 16:55:12,451 - DEBUG - LSP服务器日志：I[16:55:12.451] --> 回复：初始化(1) 19毫秒
+   2024-08-17 16:55:12,452 - DEBUG - 收到响应：{"id":1,"jsonrpc":"2.0","result":{"capabilities":{...}}}
+   ```
+
+7. **发送`textDocument/didOpen`请求：**
+   ```
+   2024-08-17 16:55:12,452 - DEBUG - 发送消息：内容长度：391
+   {"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {"textDocument": {"uri": "file:///Users/aower/python/lsp_client/main.c", "languageId": "c", "version": 1, "text": "#include <stdio.h>\n\nvoid hello() {...}"}}}
+   ```
+
+8. **LSP服务器日志：**
+   ```
+   2024-08-17 16:55:12,453 - DEBUG - LSP服务器日志：I[16:55:12.453] <-- textDocument/didOpen
+   ```
+
+9. **加载编译数据库并开始索引：**
+   ```
+   2024-08-17 16:55:12,463 - DEBUG - LSP服务器日志：I[16:55:12.463] 已从 /Users/aower/python/lsp_client/./compile_commands.json 加载编译数据库
+   2024-08-17 16:55:12,463 - DEBUG - LSP服务器日志：V[16:55:12.463] 正在从 /Users/aower/python/lsp_client/ 广播编译数据库
+   2024-08-17 16:55:12,463 - DEBUG - LSP服务器日志：I[16:55:12.463] 将1个命令加入索引队列
+   ```
+
+10. **提取系统包含路径并构建AST：**
+    ```
+    2024-08-17 16:55:12,655 - DEBUG - LSP服务器日志：I[16:55:12.655] ASTWorker 正在使用以下命令构建文件 /Users/aower/python/lsp_client/main.c 版本1
+    ```
+
+11. **发送`textDocument/documentSymbol`请求：**
+    ```
+    2024-08-17 16:55:14,457 - DEBUG - 发送消息：内容长度：153
+    {"jsonrpc": "2.0", "id": 2, "method": "textDocument/documentSymbol", "params": {"textDocument": {"uri": "file:///Users/aower/python/lsp_client/main.c"}}}
+    ```
+
+12. **LSP服务器响应`documentSymbol`请求：**
+    ```
+    2024-08-17 16:55:14,457 - DEBUG - 收到响应：{"id":2,"jsonrpc":"2.0","result":[{"containerName":"","kind":12,"location":{"range":{"end":{"character":1,"line":4},"start":{"character":0,"line":2}},"uri":"file:///Users/aower/python/lsp_client/main.c"},"name":"hello"},{"containerName":"","kind":12,"location":{"range":{"end":{"character":1,"line":9},"start":{"character":0,"line":6}},"uri":"file:///Users/aower/python/lsp_client/main.c"},"name":"main"}]}
+    ```
+
+13. **发送`textDocument/definition`请求：**
+    ```
+    2024-08-17 16:55:14,458 - DEBUG - 发送消息：内容长度：190
+    {"jsonrpc": "2.0", "id": 3, "method": "textDocument/definition", "params": {"textDocument": {"uri": "file:///Users/aower/python/lsp_client/main.c"}, "position": {"line": 7, "character": 4}}}
+    ```
+
+14. **LSP服务器响应`definition`请求：**
+    ```
+    2024-08-17 16:55:14,458 - DEBUG - 收到响应：{"id":3,"jsonrpc":"2.0","result":[{"range":{"end":{"character":10,"line":2},"start":{"character":5,"line":2}},"uri":"file:///Users/aower/python/lsp_client/main.c"}]}
+    ```
+
+15. **发送`textDocument/references`请求：**
+    ```
+    2024-08-17 16:55:14,459 - DEBUG - 发送消息：内容长度：231
+    {"jsonrpc": "2.0", "id": 4, "method": "textDocument/references", "params": {"textDocument": {"uri": "file:///Users/aower/python/lsp_client/main.c"}, "position": {"line": 2, "character": 5}, "context": {"includeDeclaration": true}}}
+    ```
+
+16. **LSP服务器响应`references`请求：**
+    ```
+    2024-08-17 16:55:14,459 - DEBUG - 收到响应：{"id":4,"jsonrpc":"2.0","result":[{"range":{"end":{"character":10,"line":2},"start":{"character":5,"line":2}},"uri":"file:///Users/aower/python/lsp_client/main.c"},{"range":{"end":{"character":9,"line":7},"start":{"character":4,"line":7}},"uri":"file:///Users/aower/python/lsp_client/main.c"}
+    ```
+
+17. **响应`references`请求后的日志记录：**
+    ```
+    2024-08-17 16:55:14,459 - INFO - References response: {'id': 4, 'jsonrpc': '2.0', 'result': [{'range': {'end': {'character': 10, 'line': 2}, 'start': {'character': 5, 'line': 2}}, 'uri': 'file:///Users/aower/python/lsp_client/main.c'}, {'range': {'end': {'character': 9, 'line': 7}, 'start': {'character': 4, 'line': 7}}, 'uri': 'file:///Users/aower/python/lsp_client/main.c'}]}
+    ```
+
+    这个响应表示 `clangd` 成功找到了 `main.c` 文件中的引用，包括 `hello` 函数的定义和调用。
+
+18. **停止LSP服务器：**
+    ```
+    2024-08-17 16:55:14,459 - INFO - 正在停止LSP服务器...
+    2024-08-17 16:55:14,459 - DEBUG - 发送消息：内容长度：49
+    {"jsonrpc": "2.0", "id": 5, "method": "shutdown"}
+    ```
+
+    这部分表示客户端请求 LSP 服务器停止工作。
+
+19. **LSP服务器收到`shutdown`请求并返回响应：**
+    ```
+    2024-08-17 16:55:14,459 - DEBUG - LSP服务器日志：V[16:55:14.459] <<< {"id":5,"jsonrpc":"2.0","method":"shutdown"}
+    2024-08-17 16:55:14,459 - DEBUG - LSP服务器日志：I[16:55:14.459] <-- shutdown(5)
+    2024-08-17 16:55:14,459 - DEBUG - LSP服务器日志：I[16:55:14.459] --> reply:shutdown(5) 0 ms
+    2024-08-17 16:55:14,459 - DEBUG - LSP服务器日志：V[16:55:14.459] >>> {"id":5,"jsonrpc":"2.0","result":null}
+    2024-08-17 16:55:14,459 - DEBUG - 收到响应：{"id":5,"jsonrpc":"2.0","result":null}
+    2024-08-17 16:55:14,459 - WARNING - 收到了未知请求ID的响应: 5
+    ```
+
+    LSP 服务器确认接收到 `shutdown` 请求并返回了一个空响应，表示服务器准备好关闭。
+
+20. **发送`exit`请求并关闭LSP服务器：**
+    ```
+    2024-08-17 16:55:15,459 - DEBUG - 发送消息：内容长度：36
+    {"jsonrpc": "2.0", "method": "exit"}
+    2024-08-17 16:55:15,460 - DEBUG - LSP服务器日志：V[16:55:15.460] <<< {"jsonrpc":"2.0","method":"exit"}
+    2024-08-17 16:55:15,460 - DEBUG - LSP服务器日志：I[16:55:15.460] <-- exit
+    2024-08-17 16:55:15,460 - DEBUG - LSP服务器日志：I[16:55:15.460] LSP 完成，退出状态为 0
+    2024-08-17 16:55:15,468 - INFO - LSP服务器已停止。
+    ```
+
+    `exit` 请求告诉服务器完全退出进程，服务器接收到后确认并安全退出，最后记录了退出状态为 0，表示正常结束。
+
+
+针对你提供的代码和请求，下面是每个请求的响应和对应的代码部分的解释：
+
+### 1. **初始化请求 (`initialize`)**
+
+#### 请求：
+```json
+{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"processId": 89664, "rootUri": "file:///Users/aower/python/lsp_client", "capabilities": {}}}
+```
+#### 响应：
+```json
+{"id":1,"jsonrpc":"2.0","result":{"capabilities":{...}}}
+```
+**解释：**
+`initialize` 请求是为了启动 LSP 服务器并通知其客户端的能力。响应中返回的 `capabilities` 字段描述了 `clangd` 支持的功能，如代码补全、跳转到定义、查找引用等。
+
+**与代码的关联：**
+这个请求和响应与具体代码内容没有直接关联，它们只是用于初始化服务器和客户端的交互。
+
+### 2. **打开文档请求 (`textDocument/didOpen`)**
+
+#### 请求：
+```json
+{"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {"textDocument": {"uri": "file:///Users/aower/python/lsp_client/main.c", "languageId": "c", "version": 1, "text": "#include <stdio.h>\n\nvoid hello() { ..."}}
+
+```
+
+**解释：**
+这个请求通知 `clangd` 服务器，用户打开了一个名为 `main.c` 的 C 文件，并传递了文件的内容。服务器接收到这个请求后，会开始分析文件的内容，比如构建抽象语法树 (AST)，为后续的符号查找、代码补全等功能做准备。
+
+**与代码的关联：**
+这一步是 `clangd` 开始处理 `main.c` 文件的起点。
+
+### 3. **获取符号请求 (`textDocument/documentSymbol`)**
+
+#### 请求：
+```json
+{"jsonrpc": "2.0", "id": 2, "method": "textDocument/documentSymbol", "params": {"textDocument": {"uri": "file:///Users/aower/python/lsp_client/main.c"}}}
+```
+#### 响应：
+```json
+{"id":2,"jsonrpc":"2.0","result":[{"containerName":"","kind":12,"location":{"range":{"end":{"character":1,"line":4},"start":{"character":0,"line":2}},"uri":"file:///Users/aower/python/lsp_client/main.c"},"name":"hello"},{"containerName":"","kind":12,"location":{"range":{"end":{"character":1,"line":9},"start":{"character":0,"line":6}},"uri":"file:///Users/aower/python/lsp_client/main.c"},"name":"main"}]}
+```
+**解释：**
+`documentSymbol` 请求用于获取文件中的所有符号（如函数、变量等）。在这个响应中，`clangd` 识别出了两个函数符号：`hello` 和 `main`。
+
+**与代码的关联：**
+- `hello` 函数的定义在第 2 行（`line = 2`），起始字符位置是第 5 个字符（`character = 5`），结束于第 10 个字符。
+- `main` 函数的定义在第 6 行（`line = 6`），起始字符位置是第 5 个字符（`character = 5`），结束于第 10 个字符。
+
+### 4. **跳转到定义请求 (`textDocument/definition`)**
+
+#### 请求：
+```json
+{"jsonrpc": "2.0", "id": 3, "method": "textDocument/definition", "params": {"textDocument": {"uri": "file:///Users/aower/python/lsp_client/main.c"}, "position": {"line": 7, "character": 4}}}
+```
+#### 响应：
+```json
+{"id":3,"jsonrpc":"2.0","result":[{"range":{"end":{"character":10,"line":2},"start":{"character":5,"line":2}},"uri":"file:///Users/aower/python/lsp_client/main.c"}]}
+```
+**解释：**
+`definition` 请求是用于查找某个符号（如函数或变量）的定义位置。在这个例子中，`clangd` 被要求查找 `hello` 函数的定义位置。
+
+**与代码的关联：**
+- 请求中的 `position` 指的是在第 7 行，第 4 个字符处的 `hello()` 函数调用。
+- 响应指向了 `hello` 函数的定义位置，即第 2 行，第 5 到第 10 个字符。
+
+### 5. **查找引用请求 (`textDocument/references`)**
+
+#### 请求：
+```json
+{"jsonrpc": "2.0", "id": 4, "method": "textDocument/references", "params": {"textDocument": {"uri": "file:///Users/aower/python/lsp_client/main.c"}, "position": {"line": 2, "character": 5}, "context": {"includeDeclaration": true}}}
+```
+#### 响应：
+```json
+{"id":4,"jsonrpc":"2.0","result":[{"range":{"end":{"character":10,"line":2},"start":{"character":5,"line":2}},"uri":"file:///Users/aower/python/lsp_client/main.c"},{"range":{"end":{"character":9,"line":7},"start":{"character":4,"line":7}},"uri":"file:///Users/aower/python/lsp_client/main.c"}]}
+```
+**解释：**
+`references` 请求用于查找某个符号的所有引用。在这个例子中，`clangd` 查找了 `hello` 函数的所有引用。
+
+**与代码的关联：**
+- 请求中的 `position` 指的是 `hello` 函数的定义位置，即第 2 行，第 5 个字符。
+- 响应返回了两个引用：
+  - 第一个是 `hello` 函数的定义位置：第 2 行，第 5 到第 10 个字符。
+  - 第二个是 `hello` 函数的调用位置：第 7 行，第 4 到第 9 个字符。
+
+### 总结：
+每个请求的响应都与代码中的具体部分相关联。初始化请求和文档打开请求主要是为了准备环境，后续的符号获取、跳转到定义、查找引用请求则直接涉及到代码中的具体符号和位置。通过这些请求和响应，`clangd` 能够为开发者提供强大的代码导航和分析功能。

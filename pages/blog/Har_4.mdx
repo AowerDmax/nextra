@@ -1,0 +1,357 @@
+---
+title: HAR:Chatgpt的响应体分析init
+date: 2024/08/06
+description: 分析Chatgpt的Response Body,对话开始前的init分析
+tags:
+  - Har
+  - ChatGPT响应体分析
+  - ChatGPT对话前的准备
+ogImage: /images/blog/Har.webp
+authorid: aower
+---
+
+import { BlogHeader } from '@/components/blog/BlogHeader'
+
+<BlogHeader />
+
+## GPT Response Body 的分析(一) 初始化 init
+
+终于来到 Response Body 的分析了.
+
+处理的还是之前的总共七次问答
+
+1. 给他一段超级长的文本,让他重写(测试输出超长文本)
+2. 继续(继续输出超长文本没有写完的内容)
+3. 1-100 之和(测试 Function Calling)
+4. 洛杉矶天气(测试 Browser Tool)
+5. 绘制统计图(Function Calling)
+6. 对话(text completion)
+7. 生成图(Image Generation)
+
+### 代码处理
+
+```python
+import json
+import re
+import logging
+import uuid
+import hashlib
+import os
+from collections import OrderedDict
+
+class HarResponseComparator:
+    def __init__(self, har_file_path):
+        self.har_file_path = har_file_path
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        handler = logging.FileHandler('CompareResponse.log', mode='w', encoding='utf-8')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+
+    def load_har_file(self):
+        with open(self.har_file_path, 'r', encoding='utf-8') as f:
+            self.har_data = json.load(f)
+
+    def generate_hash_name(self, text):
+        return hashlib.sha1(text.encode('utf-8')).hexdigest()
+
+    def parse_sse(self, data, request_content):
+        messages = data.split('\n\n')
+        parsed_messages = {}
+        for message in messages:
+            if message == 'data: [DONE]':
+                continue
+            if message.startswith('data:'):
+                message_data = message[5:].strip()
+                try:
+                    json_data = json.loads(message_data)
+                    if 'message' in json_data:
+                        message_id = json_data['message']['id']
+                        json_str = json.dumps(json_data)
+                        parsed_messages[message_id] = json_str
+                    else:
+                        unique_id = uuid.uuid4().hex
+                        json_str = json.dumps(json_data)
+                        parsed_messages['no_message_key' + unique_id] = json_str
+                except json.JSONDecodeError:
+                    self.logger.error(f"Failed to decode JSON for message data: {message_data} from request URL: {request_content}")
+        return parsed_messages
+
+    def compare_responses(self):
+        URL_pattern = re.compile(r'^https://chatgpt.com/backend-api/conversation$')
+        Method_pattern = re.compile(r'^POST$')
+
+        response_bodies = OrderedDict()
+
+        for entry in self.har_data['log']['entries']:
+            request = entry['request']
+            response = entry['response']
+
+            if URL_pattern.match(request['url']) and Method_pattern.match(request['method']):
+                request_content = ""
+                if 'postData' in request:
+                    try:
+                        request_body = json.loads(request['postData']['text'])
+                        if 'messages' in request_body and 'content' in request_body['messages'][0] and 'parts' in request_body['messages'][0]['content']:
+                            request_content = request_body['messages'][0]['content']['parts'][0]
+                            if len(request_content) > 64:
+                                request_content = self.generate_hash_name(request_content)
+                            self.logger.info(f"Request Content: {request_content}")
+                    except json.JSONDecodeError:
+                        self.logger.error(f"Failed to decode JSON for request URL: {request['url']}")
+
+                if 'text' in response['content']:
+                    try:
+                        sse_data = response['content']['text']
+                        parsed_messages = self.parse_sse(sse_data, request_content)
+                        response_bodies[request_content] = parsed_messages
+                        self.logger.info(f"Processed response from URL: {request['url']}")
+                    except json.JSONDecodeError:
+                        self.logger.error(f"Failed to decode JSON for response URL: {request['url']}")
+
+        # 创建文件夹
+        os.makedirs("CompareResponse", exist_ok=True)
+
+        # 保存每个请求体内容及其对应的解析消息到单独的 JSON 文件
+        for request_content, parsed_messages in response_bodies.items():
+            # 确保文件名中的请求内容是安全的，可以根据实际情况调整
+            safe_request_content = ''.join(e for e in request_content if e.isalnum())
+            file_name = f"CompareResponse/Response_{safe_request_content}.json"
+            messages_list = []
+            for message_id, json_str in parsed_messages.items():
+                try:
+                    # 将 JSON 字符串解析为 Python 字典
+                    json_data = json.loads(json_str)
+                    messages_list.append({
+                        message_id: json_data
+                    })
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding JSON for message ID {message_id}: {e}")
+                    # 根据需要处理错误，例如添加错误信息到日志或继续处理其他消息
+                    continue
+
+            with open(file_name, 'w', encoding='utf-8') as f:
+                json.dump(messages_list, f, ensure_ascii=False, indent=2)
+            self.logger.info("*****" * 10)
+            self.logger.info(f"Request Body Content: {request_content}")
+            self.logger.info("messages: [")
+            for message_id, json_str in parsed_messages.items():
+                self.logger.info("  {")
+                self.logger.info(f"    \"id\": \"{message_id}\",")
+                self.logger.info(f"    \"data\": {json_str.encode('utf-8').decode('unicode_escape')}")
+                self.logger.info("  },")
+            self.logger.info("]")
+            self.logger.info("-" * 80)
+
+if __name__ == "__main__":
+    har_comparator = HarResponseComparator('SourceHar/chatgpt_firefox.har')
+    har_comparator.load_har_file()
+    har_comparator.compare_responses()
+```
+
+### 处理结果
+
+```json
+2024-07-31 17:04:15,381 - INFO - Request Content: 3823227c264e8e5a8c9ad113336f997db00ac6b3
+2024-07-31 17:04:15,432 - INFO - Processed response from URL: https://chatgpt.com/backend-api/conversation
+2024-07-31 17:04:15,432 - INFO - Request Content: 继续
+2024-07-31 17:04:15,479 - INFO - Processed response from URL: https://chatgpt.com/backend-api/conversation
+2024-07-31 17:04:15,479 - INFO - Request Content: 使用function calling 编写1-100的和
+2024-07-31 17:04:15,480 - INFO - Processed response from URL: https://chatgpt.com/backend-api/conversation
+2024-07-31 17:04:15,480 - INFO - Request Content: 查看现在洛杉矶的天气
+2024-07-31 17:04:15,489 - INFO - Processed response from URL: https://chatgpt.com/backend-api/conversation
+2024-07-31 17:04:15,490 - INFO - Request Content: 绘制一张统计图,这是一个抽奖系统,基础概率是0.8%,综合概率是1.8%.当80次时触发保底.绘制1-80次抽中的概率
+2024-07-31 17:04:15,494 - INFO - Processed response from URL: https://chatgpt.com/backend-api/conversation
+2024-07-31 17:04:15,494 - INFO - Request Content: 给我一张穿着黑色衣服的韩国美女的图片
+2024-07-31 17:04:15,494 - INFO - Processed response from URL: https://chatgpt.com/backend-api/conversation
+2024-07-31 17:04:15,494 - INFO - Request Content: 给我一张穿着黑色皮衣的韩国美女的图片,长发,有一把伞
+2024-07-31 17:04:15,496 - INFO - Processed response from URL: https://chatgpt.com/backend-api/conversation
+2024-07-31 17:04:15,497 - INFO - **************************************************
+2024-07-31 17:04:15,497 - INFO - Request Body Content: 3823227c264e8e5a8c9ad113336f997db00ac6b3
+2024-07-31 17:04:15,497 - INFO - messages: [
+2024-07-31 17:04:15,497 - INFO -   {
+2024-07-31 17:04:15,497 - INFO -     "id": "05a1efdd-072e-4611-b495-2ea316d4f916",
+2024-07-31 17:04:15,497 - INFO -     "data": {"message": {"id": "05a1efdd-072e-4611-b495-2ea316d4f916", "author": {"role": "system", "name": null, "metadata": {}}, "create_time": null, "update_time": null, "content": {"content_type": "text", "parts": [""]}, "status": "finished_successfully", "end_turn": true, "weight": 0.0, "metadata": {"is_visually_hidden_from_conversation": true}, "recipient": "all", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,497 - INFO -   },
+2024-07-31 17:04:15,497 - INFO -   {
+2024-07-31 17:04:15,497 - INFO -     "id": "aaa2a10e-decf-41bd-adcb-112c1b4fcb42",
+2024-07-31 17:04:15,500 - INFO -   },
+2024-07-31 17:04:15,501 - INFO -   {
+2024-07-31 17:04:15,501 - INFO -     "id": "be7eea83-5fc5-454b-996b-9a78ef62c10e",
+2024-07-31 17:04:15,501 - INFO -     "data": {"message": {"id": "be7eea83-5fc5-454b-996b-9a78ef62c10e", "author": {"role": "assistant", "name": null, "metadata": {}}, "create_time": null, "update_time": null, "content": {"content_type": "model_editable_context", "model_set_context": "1. [2024-07-28]. User is working on a project assessment for EduVenture Labs to determine whether to expand into Vietnam or Thailand, which involves creating a structured PowerPoint presentation with analysis and recommendations.
+
+2. [2024-07-29]. User prefers detailed examples organized chronologically for their research on Guangdong province's fund establishment and management experience.
+
+3. [2024-07-29]. User likes to be called '宝贝' (Baby).
+
+4. [2024-07-29]. User appreciates detailed and accurate responses, especially with reliable source links.
+
+5. [2024-07-29]. User is writing a readme for their iOS app and needs guidance on how to include information about unit testing in the readme section.
+
+6. [2024-07-29]. User is preparing for a data analyst interview with Temu, an e-commerce platform. They are seeking information on SQL development, data warehouse systems, and Hive, to prepare for the interview.
+
+7. [2024-07-29]. User has experience as a Data Scientist Intern at Remote Kitchen in Vancouver, Canada (2022.10-2023.2), an Asset Management Intern at Changjiang Securities Co., Ltd in Shanghai, China (2021.6-2021.9), and a Market Data Analyst and Partner at The Last Miles Entertainment in San Francisco, California (2019.2-2020.2).
+
+8. [2024-07-29]. User has project experience in sentiment analysis in marketing, credit card approval prediction models, and stock price prediction using machine learning techniques and neural networks.
+
+9. [2024-07-29]. User is working on a research topic related to personality factors in the addiction behavior of the elderly to internet use, specifically in the context of physiological functions, psychological characteristics, or social adaptation.
+
+10. [2024-07-29]. User has chosen the topic 'Economic Reform and Political Stability: A Comparative Study of Vietnam and Myanmar' for their paper. They need relevant literature, including significant research findings, academic articles, reports, books, and websites.
+
+11. [2024-07-29]. User prefers detailed categorization and summaries of academic literature.
+
+12. [2024-07-29]. User is researching the new developments in the field of pancreatic tissue necrosis related to severe acute pancreatitis.
+
+13. [2024-07-29]. User is preparing to write a review on the role of gut microbiota dysbiosis in the infection of peripancreatic tissue necrosis in severe acute pancreatitis.
+
+14. [2024-07-29]. User is currently reading about options and futures.
+
+15. [2024-07-30]. User is working on a project related to digital empowerment in primary healthcare and needs to conduct field visits. The project includes researching the implementation of DIP medical insurance payments at the grassroots level.
+
+16. [2024-07-30]. User's computer username is sunyu.", "repository": null, "repo_summary": null}, "status": "finished_successfully", "end_turn": null, "weight": 1.0, "metadata": {"message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "parent_id": "aaa2a10e-decf-41bd-adcb-112c1b4fcb42", "model_switcher_deny": []}, "recipient": "all", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,501 - INFO -   },
+2024-07-31 17:04:15,501 - INFO -   {
+2024-07-31 17:04:15,501 - INFO -     "id": "3afab151-7ba9-491d-b8c0-350ecaf788fe",
+2024-07-31 17:04:15,501 - INFO -     "data": {"message": {"id": "3afab151-7ba9-491d-b8c0-350ecaf788fe", "author": {"role": "assistant", "name": null, "metadata": {}}, "create_time": 1722363319.957677, "update_time": null, "content": {"content_type": "text", "parts": ["### **Netty 常见面试题总结**
+
+Netty 是一个高性能的网络应用框架，广泛用于各类分布式系统和微服务架构中。学习 Netty 的重要性不言而喻，特别是对于需要处理高并发和低延迟的网络应用。本文将详细总结一些常见的 Netty 面试问题，希望能帮助大家更好地理解和掌握 Netty。
+
+#### BIO, NIO 和 AIO 有什么区别？
+
+##### 1. BIO (Blocking I/O)
+BIO 代表的是同步阻塞 I/O 模型。这种模型在进行数据读取和写入时，线程会被阻塞，直到操作完成。在客户端连接数量较少的情况下，BIO 的性能是可以接受的。然而，当面对大量并发连接时，BIO 模型会显得无力，因为它需要为每一个连接分配一个独立的线程，导致线程资源的浪费和系统开销的增加。
+- [对于 Netty ByteBuf 的零拷贝(Zero Copy) 的理解](https://"]}, "status": "finished_successfully", "end_turn": false, "weight": 1.0, "metadata": {"citations": [], "gizmo_id": null, "finish_details": {"type": "max_tokens"}, "is_complete": true, "message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "pad": "AAAAAAAAAAAAAAAAAAAAAA", "parent_id": "be7eea83-5fc5-454b-996b-9a78ef62c10e", "request_id": "8ab7541569f85c1d-SJC", "timestamp_": "absolute", "model_switcher_deny": []}, "recipient": "all", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,501 - INFO -   },
+2024-07-31 17:04:15,501 - INFO -   {
+2024-07-31 17:04:15,501 - INFO -     "id": "no_message_keycb95c959130244bb829eaab275dd2d57",
+2024-07-31 17:04:15,501 - INFO -     "data": {"type": "url_moderation", "url_moderation_result": {"full_url": "https://www.jianshu.com/p/38b56531565d", "is_safe": true}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "message_id": "3afab151-7ba9-491d-b8c0-350ecaf788fe"}
+2024-07-31 17:04:15,501 - INFO -   },
+2024-07-31 17:04:15,501 - INFO -   {
+2024-07-31 17:04:15,501 - INFO -     "id": "no_message_key964034d8170c41d896115f57ae3d95e9",
+2024-07-31 17:04:15,501 - INFO -     "data": {"type": "url_moderation", "url_moderation_result": {"full_url": "https://metatronxl.github.io/2019/10/22/Netty-面试题整理-二/", "is_safe": true}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "message_id": "3afab151-7ba9-491d-b8c0-350ecaf788fe"}
+2024-07-31 17:04:15,501 - INFO -   },
+2024-07-31 17:04:15,501 - INFO -   {
+2024-07-31 17:04:15,501 - INFO -     "id": "no_message_key9d5cdae54fab4722874b88b99c37a502",
+2024-07-31 17:04:15,501 - INFO -     "data": {"type": "url_moderation", "url_moderation_result": {"full_url": "https://www.cnblogs.com/qdhxhz/p/10075568.html", "is_safe": true}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "message_id": "3afab151-7ba9-491d-b8c0-350ecaf788fe"}
+2024-07-31 17:04:15,501 - INFO -   },
+2024-07-31 17:04:15,501 - INFO -   {
+2024-07-31 17:04:15,501 - INFO -     "id": "no_message_key14f75bc07ded423a905603cfe2ff5f57",
+2024-07-31 17:04:15,501 - INFO -     "data": {"type": "title_generation", "title": "Netty 面试题总结", "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf"}
+2024-07-31 17:04:15,501 - INFO -   },
+2024-07-31 17:04:15,501 - INFO -   {
+2024-07-31 17:04:15,501 - INFO -     "id": "no_message_keybc95642ec6e043a4a6c66c9ed7168d20",
+2024-07-31 17:04:15,501 - INFO -     "data": {"type": "conversation_detail_metadata", "banner_info": null, "blocked_features": [], "model_limits": [], "default_model_slug": "gpt-4o", "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf"}
+2024-07-31 17:04:15,501 - INFO -   },
+2024-07-31 17:04:15,501 - INFO - ]
+2024-07-31 17:04:15,501 - INFO - --------------------------------------------------------------------------------
+```
+
+### 结论
+
+这个日志显示了以下几个主要操作:
+
+1. 记录了一个请求的开始，包含了请求体的内容哈希值。
+
+2. 记录了三条消息的详细信息:
+
+   a. 第一条（id: 05a1efdd-072e-4611-b495-2ea316d4f916）是一个系统消息(role: "system")，内容为空。状态为"finished_successfully"，并且是隐藏的（is_visually_hidden_from_conversation: true）。
+   
+   b. 第二个消息对象（id: aaa2a10e-decf-41bd-adcb-112c1b4fcb42）没有详细内容，可能是一个占位符或中间消息。
+   
+   c. 第三条是一个助手消息(role: "assistant")，设置模型上下文(背景知识,用户画像)。这个上下文模型列出了16个关于用户的信息点，包括用户的项目、研究兴趣、工作经验等。
+
+3. 每条消息都包含了元数据，如消息ID、创建时间、状态等。
+
+4. 所有这些消息都属于同一个对话(conversation_id: "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf")。
+
+5. 日志记录的时间戳是2024年7月31日17:04:15。
+
+GPT对话初始化过程，包括设置系统消息、加载用户上下文信息等。这些信息可能用于个性化和改进与用户的后续交互。
+
+通过上述分析,我们可以知道`ChatGPT`,会将你之前的会话进行总结整理生成一个你自己的用户画像,比如他知道我最近几天都在干什么,他知道我电脑用户名,知道我之前问过了哪些消息.这也就解释了,为什么GPT能够跨对话知道你之前问题的问题,`ChatGPT` 回答性能的优越性不仅仅是模型性能带来的,至少包含`RAG`对之前的问答进行索引,让其拥有近乎无限上下文的能力.
+
+
+在2024年的AI领域，`ChatGPT`以其强大的营收能力引人注目，其中80%的收入源自于`plus`和`team`订阅服务。这一成就的背后，不仅仅是模型性能的卓越，更是用户体验的精心打磨。`ChatGPT`通过工程化的`RAG`技术，赋予了模型近乎无限的上下文理解能力，使得每一次对话都如同与一个知识渊博的伙伴交流。流式输出的设计，让信息的传递如同涓涓细流，既不急促也不拖沓，恰到好处。界面设计则如同一件艺术品，既美观又实用，每一次的响应反馈都显得优雅而得体。
+
+然而大模型产品最差的就是用户粘性. 大模型产品的特性使得用户迁移成本低，`ChatGPT` 为了节省成本,不断的对模型进⾏蒸馏和微调.以及那⼏年难得⼀变的
+前端交互,让 `ChatGPT` 的使⽤体验远远落后很多其他的模型 比如 `claude`.  `claude` 具有远超 `GPT4` 的代码编写能⼒,具有实时显示 前端代码 ,准确猜测 意图 的能⼒. 在`web`相关, `GPT`没有丝毫竞争力.
+
+个人认为,随着大模型发展, 训练耗费越来越多的资金,但模型性能的提升会变得愈来愈小. 现在与其卷模型训练,模型输出.不如优化用户体验,提高产品前后端交互.通过外挂工具链对模型的回答响应进行提升.
+
+
+
+```json
+1. [2024-07-28]. User is working on a project assessment for EduVenture Labs to determine whether to expand into Vietnam or Thailand, which involves creating a structured PowerPoint presentation with analysis and recommendations.
+
+2. [2024-07-29]. User prefers detailed examples organized chronologically for their research on Guangdong province's fund establishment and management experience.
+
+3. [2024-07-29]. User likes to be called '宝贝' (Baby).
+
+4. [2024-07-29]. User appreciates detailed and accurate responses, especially with reliable source links.
+
+5. [2024-07-29]. User is writing a readme for their iOS app and needs guidance on how to include information about unit testing in the readme section.
+
+6. [2024-07-29]. User is preparing for a data analyst interview with Temu, an e-commerce platform. They are seeking information on SQL development, data warehouse systems, and Hive, to prepare for the interview.
+
+7. [2024-07-29]. User has experience as a Data Scientist Intern at Remote Kitchen in Vancouver, Canada (2022.10-2023.2), an Asset Management Intern at Changjiang Securities Co., Ltd in Shanghai, China (2021.6-2021.9), and a Market Data Analyst and Partner at The Last Miles Entertainment in San Francisco, California (2019.2-2020.2).
+
+8. [2024-07-29]. User has project experience in sentiment analysis in marketing, credit card approval prediction models, and stock price prediction using machine learning techniques and neural networks.
+
+9. [2024-07-29]. User is working on a research topic related to personality factors in the addiction behavior of the elderly to internet use, specifically in the context of physiological functions, psychological characteristics, or social adaptation.
+
+10. [2024-07-29]. User has chosen the topic 'Economic Reform and Political Stability: A Comparative Study of Vietnam and Myanmar' for their paper. They need relevant literature, including significant research findings, academic articles, reports, books, and websites.
+
+11. [2024-07-29]. User prefers detailed categorization and summaries of academic literature.
+
+12. [2024-07-29]. User is researching the new developments in the field of pancreatic tissue necrosis related to severe acute pancreatitis.
+
+13. [2024-07-29]. User is preparing to write a review on the role of gut microbiota dysbiosis in the infection of peripancreatic tissue necrosis in severe acute pancreatitis.
+
+14. [2024-07-29]. User is currently reading about options and futures.
+
+15. [2024-07-30]. User is working on a project related to digital empowerment in primary healthcare and needs to conduct field visits. The project includes researching the implementation of DIP medical insurance payments at the grassroots level.
+
+16. [2024-07-30]. User's computer username is sunyu.
+```
+
+甚至有时间标签
+贴一个翻译
+
+```json
+1. [2024-07-28]. 用户正在为EduVenture Labs进行项目评估，以确定是否扩展到越南或泰国，这涉及创建一个包含分析和建议的结构化PowerPoint演示文稿。
+
+2. [2024-07-29]. 用户偏好按时间顺序组织的详细示例，用于研究广东省基金设立和管理的经验。
+
+3. [2024-07-29]. 用户喜欢被称为“宝贝”。
+
+4. [2024-07-29]. 用户欣赏详细且准确的回答，特别是带有可靠来源链接的。
+
+5. [2024-07-29]. 用户正在为他们的iOS应用编写README文件，并需要指导如何在README部分包含单元测试的信息。
+
+6. [2024-07-29]. 用户正在为与电商平台Temu的数据分析师面试做准备，他们正在寻找有关SQL开发、数据仓库系统和Hive的信息，以准备面试。
+
+7. [2024-07-29]. 用户曾在加拿大温哥华的Remote Kitchen担任数据科学家实习生（2022.10-2023.2），在上海的长江证券股份有限公司担任资产管理实习生（2021.6-2021.9），以及在加利福尼亚州旧金山的The Last Miles Entertainment担任市场数据分析师和合伙人（2019.2-2020.2）。
+
+8. [2024-07-29]. 用户在情感分析营销、信用卡批准预测模型以及使用机器学习和神经网络的股票价格预测方面有项目经验。
+
+9. [2024-07-29]. 用户正在研究与老年人互联网使用成瘾行为相关的个性因素，特别是在生理功能、心理特征或社会适应方面的背景。
+
+10. [2024-07-29]. 用户为其论文选择了“经济改革与政治稳定：越南和缅甸的比较研究”这一主题，需要相关文献，包括重要的研究成果、学术文章、报告、书籍和网站。
+
+11. [2024-07-29]. 用户偏好学术文献的详细分类和总结。
+
+12. [2024-07-29]. 用户正在研究与重症急性胰腺炎相关的胰腺组织坏死领域的新进展。
+
+13. [2024-07-29]. 用户准备撰写一篇关于肠道微生物失调在重症急性胰腺炎周围胰腺组织坏死感染中作用的综述。
+
+14. [2024-07-29]. 用户目前正在阅读有关期权和期货的内容。
+
+15. [2024-07-30]. 用户正在从事与初级医疗保健中的数字赋权相关的项目，并需要进行实地考察。该项目包括研究基层DIP医疗保险支付的实施情况。
+
+16. [2024-07-30]. 用户的计算机用户名是sunyu。
+```
+
+累了,先贴上,有大佬的帮我分析一下.
+
+求个小心心

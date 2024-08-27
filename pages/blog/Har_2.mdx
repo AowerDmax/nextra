@@ -1,0 +1,522 @@
+---
+title: HAR:Chatgpt的Request Body
+date: 2024/08/06
+description: 分析多种(对话、图片生成...)情况下,Chatgpt的Request Body都有哪些异同
+tags:
+  - Har
+  - ChatGPT请求体分析
+ogImage: /images/blog/Har.webp
+authorid: aower
+---
+
+import { BlogHeader } from '@/components/blog/BlogHeader'
+
+<BlogHeader />
+
+## GPT Request Body 的分析(一)
+
+本章我们主要确认以下问题:
+
+1. 在同一个`Conversation`里面. 第一次发送`Message`和第二次发送`Message`的 `Request Body` 是否相同? 后续发送的`Message`的的 `Request Body` 是否相同?
+2. 调用 `Image Generation` 时, `Request Body` 是否相同?
+3. 调用 `Function Calling` 时, `Request Body` 是否相同?
+4. 调用 `Browser Tool` 时, `Request Body` 是否相同?
+5. 在输出超长文本,单次回答无法完全输出时, 前后的`Request Body` 是否相同?
+
+### 代码处理
+
+我进行了总共七次问答
+
+1. 给他一段超级长的文本,让他重写(测试输出超长文本)
+2. 继续(继续输出超长文本没有写完的内容)
+3. 1-100 之和(测试 Function Calling)
+4. 洛杉矶天气(测试 Browser Tool)
+5. 绘制统计图(Function Calling)
+6. 对话(text completion)
+7. 生成图(Image Generation)
+
+```python
+import json
+import re
+import logging
+import os
+
+class CompareRequest:
+    def __init__(self, har_file_path):
+        self.har_file_path = har_file_path
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        handler = logging.FileHandler('CompareRequest.log', mode='w', encoding='utf-8')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+
+    def load_har_file(self):
+        with open(self.har_file_path, 'r', encoding='utf-8') as f:
+            self.har_data = json.load(f)
+
+    @staticmethod
+    def decode_unicode_escape(json_str):
+        return json_str.encode('utf-8').decode('unicode_escape')
+
+    def compare_headers(self):
+        URL_pattern = re.compile(r'^https://chatgpt.com/backend-api/conversation$')
+        Method_pattern = re.compile(r'^POST$')
+
+        request_bodies = []
+        structures = []
+
+        for entry in self.har_data['log']['entries']:
+            request = entry['request']
+            response = entry['response']
+
+            if URL_pattern.match(request['url']) and Method_pattern.match(request['method']):
+                if 'postData' in request:
+                    try:
+                        request_body = json.loads(request['postData']['text'])
+                        request_bodies.append(request_body)
+                        structures.append(request_body)
+                    except json.JSONDecodeError:
+                        self.logger.error(f"Failed to decode JSON for request URL: {request['url']}")
+
+        def get_keys(structure, parent_key=''):
+            keys = set()
+            for k, v in structure.items():
+                full_key = f"{parent_key}.{k}" if parent_key else k
+                keys.add(full_key)
+                if isinstance(v, dict):
+                    keys.update(get_keys(v, full_key))
+            return keys
+
+        structures_keys = [get_keys(body) for body in structures]
+        all_keys = set().union(*structures_keys)
+        differences = [keys.symmetric_difference(all_keys) for keys in structures_keys]
+
+        # 创建文件夹
+        os.makedirs("CompareHeader", exist_ok=True)
+
+        # 将具有相同键结构的请求体分组
+        same_structure_groups = {}
+        for idx, keys in enumerate(structures_keys):
+            key_tuple = tuple(sorted(keys))
+            if key_tuple not in same_structure_groups:
+                same_structure_groups[key_tuple] = []
+            same_structure_groups[key_tuple].append(request_bodies[idx])
+
+        # 导出文件
+        same_structure_count = 1
+        different_structure_count = 1
+        for idx, diff in enumerate(differences):
+            if diff:
+                with open(os.path.join("CompareHeader", f"RequestBody_diff_{different_structure_count}.json"), 'w', encoding='utf-8') as f:
+                    json.dump(request_bodies[idx], f, ensure_ascii=False, indent=2)
+                different_structure_count += 1
+            else:
+                with open(os.path.join("CompareHeader", f"RequestBody_same_{same_structure_count}.json"), 'w', encoding='utf-8') as f:
+                    json.dump(request_bodies[idx], f, ensure_ascii=False, indent=2)
+                same_structure_count += 1
+
+        for idx, diff in enumerate(differences):
+            if diff:
+                self.logger.info(f"Request Body {idx + 1} has different structure:")
+                self.logger.info(diff)
+            else:
+                self.logger.info(f"Request Body {idx + 1} has the same structure as others.")
+
+        for idx, (keys, body) in enumerate(zip(structures_keys, request_bodies)):
+            self.logger.info(f"Request Body {idx + 1} keys:")
+            self.logger.info(keys)
+            self.logger.info("Request Body Content:")
+            self.logger.info(json.dumps(body, ensure_ascii=False, indent=2))
+            self.logger.info("-" * 80)
+
+
+if __name__ == "__main__":
+    har_comparator = CompareRequest('SourceHar/chatgpt_firefox.har')
+    har_comparator.load_har_file()
+    har_comparator.compare_headers()
+```
+
+### 处理结果
+
+```bash
+2024-07-31 22:56:19,415 - INFO - Request Body 1 has different structure:
+2024-07-31 22:56:19,415 - INFO - {'conversation_id'}
+2024-07-31 22:56:19,415 - INFO - Request Body 2 has the same structure as others.
+2024-07-31 22:56:19,415 - INFO - Request Body 3 has the same structure as others.
+2024-07-31 22:56:19,415 - INFO - Request Body 4 has the same structure as others.
+2024-07-31 22:56:19,415 - INFO - Request Body 5 has the same structure as others.
+2024-07-31 22:56:19,415 - INFO - Request Body 6 has the same structure as others.
+2024-07-31 22:56:19,415 - INFO - Request Body 7 has the same structure as others.
+2024-07-31 22:56:19,415 - INFO - Request Body 1 keys:
+2024-07-31 22:56:19,415 - INFO - {'force_paragen', 'history_and_training_disabled', 'conversation_mode.kind', 'model', 'force_nulligen', 'reset_rate_limits', 'parent_message_id', 'force_paragen_model_slug', 'action', 'websocket_request_id', 'timezone_offset_min', 'force_rate_limit', 'force_use_sse', 'messages', 'conversation_origin', 'conversation_mode', 'suggestions'}
+2024-07-31 22:56:19,415 - INFO - Request Body Content:
+2024-07-31 22:56:19,415 - INFO - {
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa2a10e-decf-41bd-adcb-112c1b4fcb42",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "将下面的内容编写成一个博客,越长越好,越详细越好,尽可能的输出多的内容,### **Netty 常见面试题总结**\n\n很多小伙伴搞不清楚为啥要学习 Netty ，正式今天这篇文章开始之前，简单说一下自己的看法：\n\n- Netty 基于 NIO （NIO 是一种同步非阻塞的 I/O 模型，在 Java 1.4 中引入了 NIO ），使用 Netty 可以极大地简化 TCP 和 UDP 套接字服务器等网络编程，并且性能以及安全性等很多方面都非常优秀。\n- 我们平常经常接触的 Dubbo、RocketMQ、Elasticsearch、gRPC、Spark 等等热门开源项目都用到了 Netty。\n- 大部分微服务框架底层涉及到网络通信的部分都是基于 Netty 来做的，比如说 Spring Cloud 生态系统中的网关 Spring Cloud Gateway。\n\n简单总结一下和 Netty 相关问题。\n\n#### BIO,NIO 和 AIO 有啥区别？\n\n👨‍💻 面试官 ：先来简单介绍一下 BIO,NIO 和 AIO 3 者的区别吧！\n\n🙋 我 ：好的！"
+        ]
+      },
+      "metadata": {},
+      "create_time": 1722363267.048
+    }
+  ],
+  "parent_message_id": "aaa18741-c943-42bd-9cbe-c22948643c3e",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "40b4408c-c835-415d-a9a4-48c06a3f756f",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+2024-07-31 22:56:19,415 - INFO - --------------------------------------------------------------------------------
+2024-07-31 22:56:19,415 - INFO - Request Body 2 keys:
+2024-07-31 22:56:19,415 - INFO - {'force_paragen', 'conversation_id', 'history_and_training_disabled', 'model', 'conversation_mode.kind', 'force_nulligen', 'reset_rate_limits', 'parent_message_id', 'force_paragen_model_slug', 'action', 'websocket_request_id', 'timezone_offset_min', 'force_rate_limit', 'force_use_sse', 'messages', 'conversation_origin', 'conversation_mode', 'suggestions'}
+2024-07-31 22:56:19,415 - INFO - Request Body Content:
+2024-07-31 22:56:19,415 - INFO - {
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa2d2c5-49a4-4695-8f91-c5c6a4b3debb",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "继续"
+        ]
+      },
+      "metadata": {},
+      "create_time": 1722363328.879
+    }
+  ],
+  "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+  "parent_message_id": "3afab151-7ba9-491d-b8c0-350ecaf788fe",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "41931b37-b00f-4d4a-9604-a2737efdb9d8",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+2024-07-31 22:56:19,415 - INFO - --------------------------------------------------------------------------------
+2024-07-31 22:56:19,415 - INFO - Request Body 3 keys:
+2024-07-31 22:56:19,415 - INFO - {'force_paragen', 'conversation_id', 'history_and_training_disabled', 'model', 'conversation_mode.kind', 'force_nulligen', 'reset_rate_limits', 'parent_message_id', 'force_paragen_model_slug', 'action', 'websocket_request_id', 'timezone_offset_min', 'force_rate_limit', 'force_use_sse', 'messages', 'conversation_origin', 'conversation_mode', 'suggestions'}
+2024-07-31 22:56:19,415 - INFO - Request Body Content:
+2024-07-31 22:56:19,415 - INFO - {
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa234b6-e61e-43c8-9d53-2f54be6d752c",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "使用function calling 编写1-100的和"
+        ]
+      },
+      "metadata": {},
+      "create_time": 1722363391.819
+    }
+  ],
+  "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+  "parent_message_id": "66aa5db6-b42c-492d-89ec-849757f9d2c6",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "eb00147f-2a0f-4bde-b4c6-fc65ae8db092",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+2024-07-31 22:56:19,415 - INFO - --------------------------------------------------------------------------------
+2024-07-31 22:56:19,415 - INFO - Request Body 4 keys:
+2024-07-31 22:56:19,415 - INFO - {'force_paragen', 'conversation_id', 'history_and_training_disabled', 'model', 'conversation_mode.kind', 'force_nulligen', 'reset_rate_limits', 'parent_message_id', 'force_paragen_model_slug', 'action', 'websocket_request_id', 'timezone_offset_min', 'force_rate_limit', 'force_use_sse', 'messages', 'conversation_origin', 'conversation_mode', 'suggestions'}
+2024-07-31 22:56:19,415 - INFO - Request Body Content:
+2024-07-31 22:56:19,415 - INFO - {
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa27199-434c-462b-b3b1-6b1eca88e6ec",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "查看现在洛杉矶的天气"
+        ]
+      },
+      "metadata": {},
+      "create_time": 1722363456.823
+    }
+  ],
+  "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+  "parent_message_id": "8da09382-df15-4966-9b4e-e0b4d35acf89",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "00689c75-75cb-41e3-87d8-5c6233237e16",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+2024-07-31 22:56:19,415 - INFO - --------------------------------------------------------------------------------
+2024-07-31 22:56:19,415 - INFO - Request Body 5 keys:
+2024-07-31 22:56:19,415 - INFO - {'force_paragen', 'conversation_id', 'history_and_training_disabled', 'model', 'conversation_mode.kind', 'force_nulligen', 'reset_rate_limits', 'parent_message_id', 'force_paragen_model_slug', 'action', 'websocket_request_id', 'timezone_offset_min', 'force_rate_limit', 'force_use_sse', 'messages', 'conversation_origin', 'conversation_mode', 'suggestions'}
+2024-07-31 22:56:19,415 - INFO - Request Body Content:
+2024-07-31 22:56:19,415 - INFO - {
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa2be6d-9f32-4a93-81ad-80871a903ae7",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "绘制一张统计图,这是一个抽奖系统,基础概率是0.8%,综合概率是1.8%.当80次时触发保底.绘制1-80次抽中的概率"
+        ]
+      },
+      "metadata": {},
+      "create_time": 1722363487.28
+    }
+  ],
+  "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+  "parent_message_id": "5df564a1-dc16-42d2-bb78-64d553afdd94",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "3874976f-9894-4924-9883-cf8f6a3eafb7",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+2024-07-31 22:56:19,415 - INFO - --------------------------------------------------------------------------------
+2024-07-31 22:56:19,415 - INFO - Request Body 6 keys:
+2024-07-31 22:56:19,415 - INFO - {'force_paragen', 'conversation_id', 'history_and_training_disabled', 'model', 'conversation_mode.kind', 'force_nulligen', 'reset_rate_limits', 'parent_message_id', 'force_paragen_model_slug', 'action', 'websocket_request_id', 'timezone_offset_min', 'force_rate_limit', 'force_use_sse', 'messages', 'conversation_origin', 'conversation_mode', 'suggestions'}
+2024-07-31 22:56:19,415 - INFO - Request Body Content:
+2024-07-31 22:56:19,415 - INFO - {
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa2de7f-3efc-4674-92d5-38054758512d",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "给我一张穿着黑色衣服的韩国美女的图片"
+        ]
+      },
+      "metadata": {},
+      "create_time": 1722363555.34
+    }
+  ],
+  "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+  "parent_message_id": "437376be-4748-4fe7-9d4e-3b12824ef42d",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [
+    "如何增加抽奖中的中奖几率？",
+    "能否生成一个抽奖概率模拟？"
+  ],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "37b316b0-b093-45dc-a7e2-03b0eb9461cf",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+2024-07-31 22:56:19,415 - INFO - --------------------------------------------------------------------------------
+2024-07-31 22:56:19,415 - INFO - Request Body 7 keys:
+2024-07-31 22:56:19,415 - INFO - {'force_paragen', 'conversation_id', 'history_and_training_disabled', 'model', 'conversation_mode.kind', 'force_nulligen', 'reset_rate_limits', 'parent_message_id', 'force_paragen_model_slug', 'action', 'websocket_request_id', 'timezone_offset_min', 'force_rate_limit', 'force_use_sse', 'messages', 'conversation_origin', 'conversation_mode', 'suggestions'}
+2024-07-31 22:56:19,415 - INFO - Request Body Content:
+2024-07-31 22:56:19,415 - INFO - {
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa212b3-88d8-4069-af37-8ba91f082674",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "给我一张穿着黑色皮衣的韩国美女的图片,长发,有一把伞"
+        ]
+      },
+      "metadata": {},
+      "create_time": 1722363577.28
+    }
+  ],
+  "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+  "parent_message_id": "dbc9be6b-381b-4a4a-a7a4-bfb4e3f4adfa",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "31c1df3e-67fd-41dd-96e3-32b79a3591bf",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+2024-07-31 22:56:19,415 - INFO - --------------------------------------------------------------------------------
+
+
+```
+
+### 分析
+
+通过上面的 log 文件,其实我们可以发现,在同一个`Conversation`里面.不论需要的工具,不论是对话,还是生成图片,或者说是`function calling`等各种功能.只有第一次`Message`的请求体不同,在发送第一次`Message`之后,会生成一个`conversation_id`,后续的`Message`请求,都有含有`conversation_id`,其他的和第一次请求体一样.
+
+#### 第一次的请求体结构
+
+```json
+{
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa2a10e-decf-41bd-adcb-112c1b4fcb42",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": ["询问内容"]
+      },
+      "metadata": {},
+      "create_time": 1722363267.048
+    }
+  ],
+  "parent_message_id": "aaa18741-c943-42bd-9cbe-c22948643c3e",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "40b4408c-c835-415d-a9a4-48c06a3f756f",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+```
+
+![2024-07-31-23-13-41](https://cdn.professoryin.online/aower-gpt/2024/8/7c6788e23c306b759dffa0853cbcda12.png)
+
+#### 后续的请求体结构
+
+```json
+{
+  "action": "next",
+  "messages": [
+    {
+      "id": "aaa2d2c5-49a4-4695-8f91-c5c6a4b3debb",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": ["继续"]
+      },
+      "metadata": {},
+      "create_time": 1722363328.879
+    }
+  ],
+  "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+  "parent_message_id": "3afab151-7ba9-491d-b8c0-350ecaf788fe",
+  "model": "gpt-4o",
+  "timezone_offset_min": -480,
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "41931b37-b00f-4d4a-9604-a2737efdb9d8",
+  "force_use_sse": true,
+  "conversation_origin": null
+}
+```
+
+![2024-07-31-23-13-41](https://cdn.professoryin.online/aower-gpt/2024/8/d9f95c9a8889296c414c51c9c7ccc8ad.png)
+
+下面开始我们的第三篇 []()

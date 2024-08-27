@@ -1,0 +1,591 @@
+---
+title: LSP：调用gopls对Go语言进行分析
+date: 2024/08/20
+description: 使用python调用gopls对Go语言进行分析,LSP语言无关性验证
+tags:
+  - LSP
+  - LLM能力扩展
+  - gopls
+ogImage: /images/blog/LSP.webp
+authorid: aower
+---
+
+# 使用python调用gopls对Go语言进行分析
+
+## 代码
+
+需要分析的`Go语言`代码
+
+```Go filename="example.go"
+package main
+
+import "fmt"
+
+func greet(name string) string {
+	return "Hello, " + name + "!"
+}
+
+func main() {
+	message := greet("World")
+	fmt.Println(message)
+}
+```
+
+
+### 调用gopls对Go语言进行分析
+
+```python
+import json
+import subprocess
+import os
+import logging
+import time
+import threading
+import queue
+
+logging.basicConfig(filename='lsp_client.log', level=logging.DEBUG, 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
+class LSPClient:
+    def __init__(self, compile_commands_dir=None, extra_args=None):
+        self.lsp_process = None
+        self.request_queue = queue.Queue()
+        self.response_queue = queue.Queue()
+        self.next_id = 1
+        self.running = False
+        self.pending_requests = {}
+        self.compile_commands_dir = compile_commands_dir
+        self.extra_args = extra_args or []
+
+
+    def start(self):
+        logging.info("Starting LSP server...")
+        # 修改 cmd 列表中的 LSP 服务器命令
+        cmd = ["gopls", "serve"] 
+
+        if self.compile_commands_dir:
+            cmd.append(f"--compile-commands-dir={self.compile_commands_dir}")
+        cmd.extend(self.extra_args)
+        
+        self.lsp_process = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            cwd=os.getcwd()
+        )
+        logging.info(f"LSP server started with PID: {self.lsp_process.pid}")
+        
+        self.running = True
+        threading.Thread(target=self._read_stdout, daemon=True).start()
+        threading.Thread(target=self._read_stderr, daemon=True).start()
+        threading.Thread(target=self._write_stdin, daemon=True).start()
+
+    def stop(self):
+        logging.info("Stopping LSP server...")
+        self.running = False
+        if self.lsp_process:
+            self._send_shutdown_request()
+            self.lsp_process.terminate()
+            self.lsp_process.wait(timeout=5)
+        logging.info("LSP server stopped.")
+
+    def _send_shutdown_request(self):
+        shutdown_request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "shutdown"
+        }
+        self._send_request(shutdown_request)
+        # Wait for shutdown response
+        time.sleep(1)
+        exit_notification = {
+            "jsonrpc": "2.0",
+            "method": "exit"
+        }
+        self._send_request(exit_notification)
+
+    def _read_stdout(self):
+        while self.running:
+            try:
+                headers = self._read_headers(self.lsp_process.stdout)
+                if 'Content-Length' in headers:
+                    content_length = int(headers['Content-Length'])
+                    content = self.lsp_process.stdout.read(content_length)
+                    self._handle_response(content)
+            except Exception as e:
+                logging.error(f"Error reading stdout: {str(e)}")
+
+    def _read_stderr(self):
+        for line in self.lsp_process.stderr:
+            logging.debug(f"LSP server log: {line.strip()}")
+
+    def _write_stdin(self):
+        while self.running:
+            try:
+                request = self.request_queue.get(timeout=0.1)
+                self._send_request(request)
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logging.error(f"Error writing to stdin: {str(e)}")
+
+    def _read_headers(self, stream):
+        headers = {}
+        while True:
+            line = stream.readline().strip()
+            if not line:
+                break
+            key, value = line.split(': ')
+            headers[key] = value
+        return headers
+
+    def _send_request(self, request):
+        try:
+            content = json.dumps(request)
+            headers = f"Content-Length: {len(content)}\r\n\r\n"
+            full_message = headers + content
+            logging.debug(f"Sending message: {full_message}")
+            self.lsp_process.stdin.write(full_message)
+            self.lsp_process.stdin.flush()
+        except BrokenPipeError:
+            logging.error("LSP server process is not available for writing.")
+
+    def _handle_response(self, content):
+        logging.debug(f"Received response: {content}")
+        response = json.loads(content)
+        if 'id' in response:
+            request_id = response['id']
+            if request_id in self.pending_requests:
+                self.pending_requests[request_id].put(response)
+            else:
+                logging.warning(f"Received response for unknown request id: {request_id}")
+        elif 'method' in response:
+            # Handle server notifications
+            if response['method'] == 'textDocument/publishDiagnostics':
+                logging.info(f"Diagnostics: {response['params']}")
+
+    def _send_request_and_wait(self, request, timeout=5):
+        request_id = request['id']
+        response_queue = queue.Queue()
+        self.pending_requests[request_id] = response_queue
+        self.request_queue.put(request)
+        try:
+            return response_queue.get(timeout=timeout)
+        except queue.Empty:
+            logging.error(f"Timeout waiting for response to request {request_id}")
+            return None
+        finally:
+            del self.pending_requests[request_id]
+
+    def initialize(self):
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "initialize",
+            "params": {
+                "processId": os.getpid(),
+                "rootUri": f"file://{os.getcwd()}",
+                "capabilities": {}
+            }
+        }
+        return self._send_request_and_wait(request)
+
+    def initialized(self):
+        notification = {
+            "jsonrpc": "2.0",
+            "method": "initialized",
+            "params": {}
+        }
+        self.request_queue.put(notification)
+
+    def did_open(self, file_path):
+        with open(file_path, 'r') as file:
+            file_content = file.read()
+
+        notification = {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": f"file://{file_path}",
+                    "languageId": "go",
+                    "version": 1,
+                    "text": file_content
+                }
+            }
+        }
+        self.request_queue.put(notification)
+
+    def document_symbols(self, file_path):
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "textDocument/documentSymbol",
+            "params": {
+                "textDocument": {"uri": f"file://{file_path}"}
+            }
+        }
+        return self._send_request_and_wait(request)
+
+    def definition(self, file_path, line, character):
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": f"file://{file_path}"},
+                "position": {"line": line, "character": character}
+            }
+        }
+        return self._send_request_and_wait(request)
+
+    def references(self, file_path, line, character):
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._get_next_id(),
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": f"file://{file_path}"},
+                "position": {"line": line, "character": character},
+                "context": {"includeDeclaration": True}
+            }
+        }
+        return self._send_request_and_wait(request)
+
+    def _get_next_id(self):
+        id = self.next_id
+        self.next_id += 1
+        return id
+
+def main():
+    client = LSPClient()
+    try:
+        client.start()
+        
+        init_response = client.initialize()
+        if not init_response:
+            raise Exception("Failed to initialize LSP server")
+        logging.info(f"Initialize response: {init_response}")
+        
+        client.initialized()
+        
+        file_path = os.path.join(os.getcwd(), 'example.go')
+        client.did_open(file_path)
+        
+        time.sleep(2)  # Give some time for the server to process the file
+        
+        symbols_response = client.document_symbols(file_path)
+        logging.info(f"Document Symbols response: {symbols_response}")
+        
+        definition_response = client.definition(file_path, 7, 10)  # 行: 7, 列: 10
+        logging.info(f"Definition response: {definition_response}")
+        
+        references_response = client.references(file_path, 4, 6)  # 行: 4, 列: 6
+
+        logging.info(f"References response: {references_response}")
+        
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}")
+    finally:
+        client.stop()
+
+if __name__ == "__main__":
+    main()
+```
+
+## 日志分析
+
+
+日志内容的中文解释：
+
+---
+
+**2024-08-17 17:57:14,424 - 信息 - 启动 LSP 服务器...**
+
+LSP 客户端正在启动 LSP（语言服务器协议）服务器。
+
+**2024-08-17 17:57:14,461 - 信息 - LSP 服务器已启动，PID: 33505**
+
+LSP 服务器成功启动，进程 ID 为 33505。
+
+**2024-08-17 17:57:14,462 - 调试 - 发送消息: 内容长度: 158**
+
+客户端向 LSP 服务器发送了初始化请求。
+
+```json
+{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"processId": 33482, "rootUri": "file:///Users/aower/python/lsp_client/go", "capabilities": {}}}
+```
+
+**2024-08-17 17:57:14,518 - 调试 - LSP 服务器日志: 提供的标志未定义：-compile-commands-dir**
+
+LSP 服务器返回一个错误，指出未定义 `-compile-commands-dir` 标志。
+
+**2024-08-17 17:57:19,463 - 错误 - 等待请求 1 的响应超时**
+
+客户端未能从服务器获得对初始化请求的响应，导致超时。
+
+**2024-08-17 17:57:19,463 - 错误 - 发生错误：LSP 服务器初始化失败**
+
+由于超时，LSP 服务器未能成功初始化。
+
+**2024-08-17 17:57:19,463 - 信息 - 停止 LSP 服务器...**
+
+客户端正在尝试停止 LSP 服务器。
+
+**2024-08-17 18:00:33,284 - 信息 - 启动 LSP 服务器...**
+
+客户端再次尝试启动 LSP 服务器。
+
+**2024-08-17 18:00:33,286 - 信息 - LSP 服务器已启动，PID: 35875**
+
+LSP 服务器成功启动，进程 ID 为 35875。
+
+**2024-08-17 18:00:33,344 - 调试 - 收到响应:**
+
+LSP 服务器响应了初始化请求，并返回了其支持的功能（如自动完成、代码悬停、符号查找等）。
+
+**2024-08-17 18:00:33,345 - 调试 - 发送消息:**
+
+客户端通知服务器初始化已完成。
+
+**2024-08-17 18:00:33,345 - 调试 - 发送消息:**
+
+客户端发送了 `textDocument/didOpen` 请求，通知服务器打开了一个 Go 文件 `example.go`。
+
+**2024-08-17 18:00:33,686 - 信息 - 诊断:**
+
+服务器响应并报告了 `example.go` 文件的诊断结果，没有发现任何问题（诊断为空）。
+
+**2024-08-17 18:00:35,349 - 调试 - 发送消息:**
+
+客户端发送了 `textDocument/documentSymbol` 请求，询问服务器关于该文件中的符号信息。
+
+**2024-08-17 18:00:35,349 - 信息 - 文档符号响应:**
+
+服务器返回了文件中定义的符号信息，包括 `greet` 函数和 `main` 函数。
+
+**2024-08-17 18:00:35,349 - 调试 - 发送消息:**
+
+客户端发送了 `textDocument/definition` 请求，询问 `greet` 函数的定义位置。
+
+**2024-08-17 18:00:35,350 - 调试 - 收到响应:**
+
+服务器返回了一个错误，指出列号超出了行的末尾（`column is beyond end of line`）。
+
+**2024-08-17 18:00:35,350 - 信息 - 定义响应:**
+
+客户端记录了服务器返回的错误消息。
+
+**2024-08-17 18:00:35,350 - 调试 - 发送消息:**
+
+客户端发送了 `textDocument/references` 请求，询问 `greet` 函数的引用位置。
+
+**2024-08-17 18:00:35,350 - 调试 - 收到响应:**
+
+服务器返回了 `greet` 函数的定义和引用位置。
+
+**2024-08-17 18:00:35,350 - 信息 - 引用响应:**
+
+客户端记录了服务器返回的引用位置。
+
+**2024-08-17 18:00:35,351 - 信息 - 停止 LSP 服务器...**
+
+客户端开始停止 LSP 服务器。
+
+**2024-08-17 18:00:35,351 - 调试 - 发送消息:**
+
+客户端发送了 `shutdown` 请求，通知服务器停止服务。
+
+**2024-08-17 18:00:35,351 - 调试 - 收到响应:**
+
+服务器记录了关闭会话的日志。
+
+**2024-08-17 18:00:36,357 - 信息 - LSP 服务器已停止。**
+
+服务器已成功停止。
+
+---
+
+整个过程中，最初的尝试由于一个未定义的标志 `-compile-commands-dir` 而失败。在调整后，LSP 服务器成功启动，响应了客户端的各种请求，包括文件打开、符号查找和引用查找。
+
+
+你描述的整个过程中，LSP 服务器对一系列请求（如初始化、打开文档、获取符号、跳转到定义、查找引用等）做出了响应。下面详细解释每个请求和相应的响应内容，并指出它们与具体代码的关联。
+
+### 1. **初始化（`initialize` 请求）**
+   - **请求内容**: 
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "id": 1,
+       "method": "initialize",
+       "params": {
+         "processId": 35874,
+         "rootUri": "file:///Users/aower/python/lsp_client/go",
+         "capabilities": {}
+       }
+     }
+     ```
+   - **响应内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "result": {
+         "capabilities": {
+           "textDocumentSync": {"openClose": true, "change": 2, "save": {}},
+           "completionProvider": {"triggerCharacters": ["."]},
+           "hoverProvider": true,
+           ...
+         },
+         "serverInfo": {"name": "gopls", "version": "v0.16.1"}
+       },
+       "id": 1
+     }
+     ```
+   - **理解**:
+     LSP 客户端向服务器发送初始化请求，服务器返回其支持的功能（如文档同步、代码补全、悬停提示等）。这些功能描述了服务器可以提供的语言服务。
+
+### 2. **打开文档（`textDocument/didOpen` 请求）**
+   - **请求内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "method": "textDocument/didOpen",
+       "params": {
+         "textDocument": {
+           "uri": "file:///Users/aower/python/lsp_client/go/example.go",
+           "languageId": "go",
+           "version": 1,
+           "text": "package main\n\nimport \"fmt\"\n\nfunc greet(name string) string {\n\treturn \"Hello, \" + name + \"!\"\n}\n\nfunc main() {\n\tmessage := greet(\"World\")\n\tfmt.Println(message)\n}\n"
+         }
+       }
+     }
+     ```
+   - **响应内容**:
+     - `window/showMessage`: 表示正在加载包。
+     - `window/logMessage`: 表示创建了视图，加载了 Go 文件的环境和相关配置。
+     - `textDocument/publishDiagnostics`: 没有发现代码中的错误或警告。
+   - **理解**:
+     当 LSP 客户端打开一个文档时，它会发送文件的内容到服务器。服务器会解析文件，加载相关包，并检查是否存在语法或语义错误。响应中没有错误（`diagnostics` 为空），表示代码是正确的。
+
+### 3. **获取符号（`textDocument/documentSymbol` 请求）**
+   - **请求内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "id": 2,
+       "method": "textDocument/documentSymbol",
+       "params": {
+         "textDocument": {"uri": "file:///Users/aower/python/lsp_client/go/example.go"}
+       }
+     }
+     ```
+   - **响应内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "result": [
+         {
+           "location": {
+             "uri": "file:///Users/aower/python/lsp_client/go/example.go",
+             "range": {"start": {"line": 4, "character": 0}, "end": {"line": 6, "character": 1}}
+           },
+           "name": "greet",
+           "kind": 12
+         },
+         {
+           "location": {
+             "uri": "file:///Users/aower/python/lsp_client/go/example.go",
+             "range": {"start": {"line": 8, "character": 0}, "end": {"line": 11, "character": 1}}
+           },
+           "name": "main",
+           "kind": 12
+         }
+       ],
+       "id": 2
+     }
+     ```
+   - **理解**:
+     服务器返回了文档中定义的所有符号，包括 `greet` 和 `main` 函数。`kind: 12` 表示这是一个函数。响应中的 `range` 标识了符号在文档中的位置。
+
+### 4. **跳转到定义（`textDocument/definition` 请求）**
+   - **请求内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "id": 3,
+       "method": "textDocument/definition",
+       "params": {
+         "textDocument": {"uri": "file:///Users/aower/python/lsp_client/go/example.go"},
+         "position": {"line": 7, "character": 10}
+       }
+     }
+     ```
+   - **响应内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "error": {"code": 0, "message": "column is beyond end of line"},
+       "id": 3
+     }
+     ```
+   - **理解**:
+     LSP 客户端请求跳转到某个符号的定义位置，但请求中的 `position` （行号和列号）超出了行的实际长度（可能是由误差或错误导致的）。因此，服务器返回了一个错误，提示列号超出了行的范围。
+
+### 5. **查找引用（`textDocument/references` 请求）**
+   - **请求内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "id": 4,
+       "method": "textDocument/references",
+       "params": {
+         "textDocument": {"uri": "file:///Users/aower/python/lsp_client/go/example.go"},
+         "position": {"line": 4, "character": 6},
+         "context": {"includeDeclaration": true}
+       }
+     }
+     ```
+   - **响应内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "result": [
+         {"uri": "file:///Users/aower/python/lsp_client/go/example.go", "range": {"start": {"line": 4, "character": 5}, "end": {"line": 4, "character": 10}}},
+         {"uri": "file:///Users/aower/python/lsp_client/go/example.go", "range": {"start": {"line": 9, "character": 12}, "end": {"line": 9, "character": 17}}}
+       ],
+       "id": 4
+     }
+     ```
+   - **理解**:
+     LSP 服务器返回了 `greet` 函数的所有引用位置。第一个位置是函数定义处，第二个位置是 `main` 函数中调用 `greet` 的地方。这些响应帮助 IDE 高亮或跳转到这些引用位置。
+
+### 6. **关闭服务器（`shutdown` 和 `exit` 请求）**
+   - **请求内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "id": 5,
+       "method": "shutdown"
+     }
+     ```
+   - **响应内容**:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "method": "window/logMessage",
+       "params": {"type": 3, "message": "2024/08/17 18:03:51 Shutdown session\n\tshutdown_session=1\n"}
+     }
+     ```
+   - **理解**:
+     LSP 客户端请求关闭服务器，服务器成功响应并记录了关闭会话的信息。随后发送 `exit` 请求，完成关闭过程。
+
+### 总结
+- 你处理的文件定义了两个函数：`greet` 和 `main`。
+- LSP 服务器在文档打开时解析了这些符号，并能够正确识别和返回它们的定义和引用。
+- 跳转到定义的请求因为位置超出了行的范围而失败了，但查找引用的请求成功返回了所有引用。
+- 最后，服务器成功地响应了关闭请求。
+
+每个响应都与代码中的某个部分直接相关，通过这些响应，IDE 能够提供自动补全、代码跳转等智能编辑功能。

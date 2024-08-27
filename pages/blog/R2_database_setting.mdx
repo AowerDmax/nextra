@@ -1,0 +1,260 @@
+---
+title: 使用CloudFlare对R2数据库做图床
+date: 2023/08/06
+description: CloudFlare做图床
+tags:
+  - CloudFlare
+ogImage: /images/blog/CloudFlare.webp
+authorid: aower
+---
+
+import { BlogHeader } from '@/components/blog/BlogHeader'
+
+<BlogHeader />
+
+在我上一篇文章中([家庭数据中心系列 chevereto图床多节点定时自动同步教程](https://blog.tangwudi.com/homedatacenter12153/))提到，在打造了由目前自建图床chevereto的主站点(位于家庭数据中心)+备用站点(位于家庭数据中心)+同城灾备站点(位于腾讯云服务器)组成的"同城双中心"、"本地云+公有云的混合云"结构之后(同时实现了图片实时同步+定时数据库自动导入)，我还想要打造chevereto图床的异地容灾站点，以便最终进化为终极形态："两地三中心"。
+
+经过仔细思量以后，决定就选用cloudflare R2对象存储来实现，原因是因为"10g的免费存储空间"以及其"不限流量"的特性(再对比下腾讯云COS的出网流量费用，不比不知道，一比吓一跳～)，加上本身我也准备使用cloudflare pages上部署的基于Hexo的静态博客，来实现wordpress博客主站点的异地容灾方案，cloudflare pages + cloudflare R2，刚好是绝配好不好？那就这么定了！
+
+不过我现在已有的chevereto的同步方案底层支撑技术是syncthing，这个就不适用于将我本地的图片同步到cloudflare R2，所以必须引入新的解决方案：rclone。
+
+# 使用rclone和cloudflare R2打造异地容灾图床
+
+## rclone简介
+
+其实在以前的文章中，我在对比网上已有的同步方案时就提到过rclone(参见：[docker系列 使用docker基于syncthing实现多点文件夹同步之详细教程](https://blog.tangwudi.com/technology/docker11939/))，也简要介绍过其优势：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e8e8e87423c9703f5643ec7576f7f409.png)
+
+不过那时在"文件夹数据同步"这个明确场景中syncthing更符合我的需求。而现在，在面对"将本地chevereto图片文件夹里的图片同步到cloudflare R2中"这个场景时，rclone就是最佳选择了。
+
+---
+
+其实在这种图床方案的迁移中，一个很关键的问题是图片地址的兼容性。举例说明：前面那张图片的真实地址为`https://cdn.professoryin.online/aower-gpt/2024/8/e8e8e87423c9703f5643ec7576f7f409.png`，其相对路径地址为：`images/2024/05/21/202405211354063.png`,而chevereto里面图片的存储路径刚好是这样：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c5286ea95f6b9efedcdfd60d5aa35d7a.png)
+
+  
+所以chevereto图床的存放还是很讲规矩的，那么，在迁移图床的时候，如果迁移目的地最终也能实现图片相同地址的输出，那么迁移就算是成功了，COS类型的方案刚好可以实现这一点，只将chevereto图床里images整个目录全部复制到R2的桶下即可。
+
+---
+
+## 使用rclone批量上传chevereto图床文件到R2
+
+### 前置准备工作：创建R2存储桶
+
+由于后面在配置rclone的时候，需要使用到R2的Accesskey和SecretKey，所以需要先创建R2存储桶(需要先开通R2，要用到信用卡绑定，这一步并不会产生费用)。
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b56bbaf5024b16e6097c9957ee16a1c1.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/66127f06010d45383bc4a408abc4e2eb.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ae662188b97931e6452261b8cc327ae2.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e846e7565c607cda4eb4cd77156623a8.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/3d5b97990da7e6f141097c6e0aefa178.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/060b83836133dc298f8d8daaaf4d02cd.png)
+
+### 安装rclone
+
+首先在macos上安装rclone，可以使用brew方式安装：
+
+```
+brew install rclone
+```
+
+也可以直接在rclone官网下载适合自己的包，官网链接如下：[](https://rclone.org/downloads/)[https://rclone.org/downloads/](https://rclone.org/downloads/)：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/f4b4d0b0337dd9121017aaa8408f313c.png)
+
+  
+注：采用直接下载的方式，解压缩后直接运行rclone执行文件即可。
+
+### 初始化rclone
+
+将rclone路径添加到当前账号的环境变量中(采用brew方式安装的应该不需要)：
+
+```
+vim ~/.bash_profile #编辑当前账号的环境变量
+```
+
+根据rclone的实际路径修改,我是把rclone解压缩后的文件夹放到了应用程序文件夹里，所以将其路径添加到PATH最后：
+
+```
+PATH=/bin:/usr/bin:/usr/local/bin:/Applications/rclone: 
+```
+
+保存退出以后，使用如下命令重新载入环境变量：
+
+```text
+source ~/.bash_profile
+```
+
+运行以下命令进行rclone的初始化：
+
+```
+rclone config
+```
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/f800321c7f5d2a3b1e03b36e03dc1f45.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/221d67d87ada6b5bad28664c31030ca1.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ec1a9c66515a239a55dcf23a84afad87.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/0e43e4e80c28a95cfd99958d95f2ab13.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/37fc9ae54a8e9a19b1d8b1c4d6e2a2ed.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c7c362aac39ecf6de664905af204e4e7.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/4f9452f7645ea4660872f6ac28513185.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b3dbbb76280ed033583a7d93d48ce174.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/2287701c570a8231721bcd51218285a2.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/688968ae5fce93a47aab98852135a089.png)
+
+  
+注：选择y的话会进入高级选项，几十个，其实只有第一个是需要设置的，将存储桶的acl改为public-read：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/a0f437343cc35fa5105cfda6d43668a1.png)
+
+  
+其他选项一路回车使用默认值即可。最终配置如下：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e76b60e8641ab45192af9903017a8310.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c7cf392ad2e51907eb5031819293b3c9.png)
+
+  
+其实上述`rclone config`的所有操作目的是生成"rclone.conf"的配置文件，所以我们其实也可以直接新建一个配置文件然后直接编辑其内容，macos里rclone的配置文件路径为：
+
+```
+/Users/your-username/.config/rclone/rclone.conf
+```
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/baac9f7d10d7e4d8bd2ad8d73074e675.png)
+
+  
+我直接把配置文件内容贴出来，大家可以直接使用：
+
+```
+[images-bed]type = s3provider = Cloudflareaccess_key_id = xxxxxxxxxxx  #改为自己access_key_idsecret_access_key = xxxxxxxxxx #改为自己的secret_access_keyregion = autoendpoint = https://xxxxx.r2.cloudflarestorage.com #改为自己的endpointbucket_acl = public-readdescription = cloudflare R2
+```
+
+### 使用rclone将chevereto图床图片批量上传到R2
+
+1、使用`rclone tree`命令验证是否能正常访问R2上的images-bed桶：
+
+```
+rclone tree images-bed:images-bed #根据自己实际设置进行修改
+```
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/baa54c79ae879f7cd4b9fd9d4049f0eb.png)
+
+  
+2、使用`rclone copy`命令将本地chevereto图床的图片上传到R2上的images-bed桶：
+
+```
+rclone copy -P -v /Volumes/data/docker/chevereto/data/images images-bed:images-bed/images
+```
+
+注：上面命令的`-P`参数是以500毫秒为单位显示传输进度(默认一分钟)，`-v`参数后面跟的是我的chevereto里images目录的实际路径，最后的`images-bed:images-bed/images`是指前面定义的R2远程存储(images-bed):上创建的桶(images-bed)上的images目录，通过这种格式，就可以实现我们前面提到的输出路径一致的效果。  
+等上传完成：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/47b66ea50433473d34b1c697548cd717.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/73d1c6a3c5053695e75a0144b78343a0.png)
+
+  
+3、再次使用`rclone tree` 命令进行确认：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ffd4248d5881fd38551e0c49c40457eb.png)
+
+# cloudflare R2上配置自定义域
+
+图片完成上传后，默认R2上的"images-bed"桶是无法访问的，如下图：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/8dba314f4be05494b132bb28130e42d5.png)
+
+  
+这时需要给R2上的"images-bed"桶配置自定义域：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/814b388ec221749470e133f9d083fd57.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/a94c00678f899b8f04ba99ef630adffa.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c47dc22e43f0faa95b6c70c6c2380541.png)
+
+  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/87faeded2eccb80d19b5167e30d2f445.png)
+
+  
+已经生效了，我们用试验来证明，把任意一张图片使用原本的链接打开：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/1c57b56542b6530493203665daa4f6b8.png)
+
+  
+把上图红框中的原本的域名换成`r2image.tangwudi.com`然后重新回车打开：  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/3cdf5072af65a00f919df20fa871317d.png)
+
+  
+成功。如果要用R2完全替代我的chevereto图床，只需要删除原有的`image.tangwudi.com`的解析，然后把R2上images-bed的自定义域改为`image.tangwudi.com`即可。
+
+另：rclone还有其他很多功能，包括把远程存储挂载到本地等，我就不一一介绍了，主要是我自己也没啥需求，大家有兴趣可以自行研究一下，网上也有很多相关教程。  
+
+![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5280496eafcc9bfd0d503c9cb701eedf.png)
+
+# 后话
+
+rclone本身只是一个简简单单的一次性执行程序，如果要实现基于设置条件的自动执行，比如开机自动执行、定时自动执行等，需要依靠外部操作来配合，比如操作系统本身提供的功能，如：开机自启动、计划任务等。
+
+一般来说，使用rclone最常用的方式是开机运行和定期运行备份，在macos系统上只需要使用自带的launchctl或者crontab配合rclone即可实现，其他操作系统都有各自的实现方式，不过，我的需求是一旦chevereto的图片文件夹有变化(有新增图片)，rclone就自动同步到R2上，否则难道每次我新增了图片，还要手动运行rclone一次不成，那也太low了，所以研究了下，发现fsnotify似乎可以做到，不过那个又要专门写一篇文章来研究了，这次就到这里吧，暂时我也只能用很low的方式：有新增图片以后手动运行rclone上传新图片。
+
+另：我准备把图床改到R2试试，以前总觉得图片打开有点慢(主要是缓存的图片无法享受优选IP的待遇)，看这下改到R2之后效果如何，毕竟创建桶的时候有个位置自动的默认选项，也不知道有没有用。
+
+
+> 本文参考地址: https://blog.tangwudi.com
+

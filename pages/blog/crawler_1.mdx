@@ -1,0 +1,665 @@
+---
+title: 爬虫简史,JavaScript模拟获取内容
+date: 2024/08/22
+description: 爬虫简史：从简单到复杂的进化之路，JavaScript模拟获取内容
+tags:
+  - crawler
+  - Selenium
+  - JavaScript模拟
+ogImage: /images/blog/Har.webp
+authorid: aower
+---
+
+> 引言
+
+随着互联网的飞速发展,数据已成为各行各业的重要资产。爬虫技术作为获取网络数据的重要手段,也在不断evolving。本文将带您深入了解现代爬虫技术中的一个重要分支 
+
+- JavaScript模拟获取内容,
+
+本文将重点介绍Selenium和undetected_chromedriver的使用。
+
+# 爬虫简史：从简单到复杂的进化之路，JavaScript模拟获取内容
+
+随着技术的进步和商业利益的驱动，越来越多的网站开始意识到数据的重要性，逐步增加了各种反爬机制。最早的反爬措施包括增加加固保护代码，使用JavaScript动态加载内容,简单的HTTP请求无法获取完整数据。此时,我们需要模拟真实浏览器环境。
+
+在这个阶段，爬虫技术开始从简单的HTTP请求转变为逆向工程和协议模拟的方式。爬虫开发者需要了解JavaScript的工作原理，并使用工具来模拟浏览器的行为，以绕过反爬机制。
+
+## Selenium
+
+Selenium的本质是一个强大的浏览器自动化工具，它通过模拟真实的用户行为来实现网页的自动化操作。这使得它成为处理JavaScript渲染页面、需要用户交互的网站以及复杂web应用的理想爬虫工具。然而，在使用Selenium进行爬虫时，我们需要权衡其功能强大和资源消耗之间的平衡，并根据具体情况选择最适合的爬取策略。
+
+
+### Selenium的介绍
+
+Selenium的本质是一个Web浏览器自动化工具。它的核心思想是通过程序代码来模拟人类与浏览器的交互行为。Selenium通过以下方式实现这一目标：
+
+1. **WebDriver接口**：Selenium定义了一套标准的WebDriver接口，不同的浏览器（如Chrome、Firefox等）都实现了这套接口。这使得Selenium可以通过统一的API来控制不同的浏览器。
+
+2. **浏览器驱动**：每种浏览器都有其对应的驱动程序（如ChromeDriver、GeckoDriver等）。这些驱动程序作为Selenium和浏览器之间的桥梁，将Selenium的命令转换为浏览器可以理解和执行的操作。
+
+3. **JavaScript执行**：Selenium可以在页面上执行JavaScript代码，这使得它能够与页面进行更深层次的交互，包括操作DOM、处理AJAX请求等。
+
+### Selenium能够实现爬虫的基础
+
+Selenium能够实现爬虫功能，主要基于以下几个关键点：
+
+1. **完整的浏览器环境**：Selenium控制的是真实的浏览器，因此它可以加载和渲染完整的网页，包括JavaScript动态生成的内容。这解决了传统HTTP请求爬虫无法获取动态内容的问题。
+
+2. **模拟用户行为**：Selenium可以模拟点击、输入、滚动等用户行为，这使得它能够访问需要交互才能显示的内容。
+
+3. **等待机制**：Selenium提供了显式和隐式等待机制，可以等待页面元素加载完成，这对于处理AJAX加载的内容特别有用。
+
+4. **获取页面信息**：Selenium可以获取页面源代码、元素属性、文本内容等，这些都是爬虫所需要的数据。
+
+> Selenium的核心功能?
+
+1. **浏览器控制**：打开、关闭、前进、后退、刷新等。
+
+2. **元素定位**：通过多种方式（ID、Class、Name、XPath等）定位页面元素。
+
+3. **元素操作**：点击、输入文本、清除文本、提交表单等。
+
+4. **页面操作**：获取标题、URL、源代码等。
+
+5. **窗口和框架管理**：切换窗口、处理弹出窗口、切换框架等。
+
+6. **Cookie管理**：添加、删除、获取Cookie。
+
+7. **执行JavaScript**：在页面上执行自定义的JavaScript代码。
+
+8. **截图**：捕获整个页面或特定元素的截图。
+
+9. **等待策略**：显式等待、隐式等待、流畅等待。
+
+> Selenium的局限性?
+
+尽管Selenium功能强大，但也有一些局限性需要注意：
+
+1. **性能**：相比直接的HTTP请求，Selenium操作浏览器的方式较慢。
+
+2. **资源消耗**：运行完整的浏览器需要较多的系统资源。
+
+3. **稳定性**：某些情况下，浏览器可能会崩溃或行为不稳定。
+
+4. **检测**：一些网站可以检测Selenium的使用，并采取反爬虫措施。
+
+5. **维护**：需要定期更新WebDriver以匹配浏览器版本。
+
+
+
+Selenium是一个强大的浏览器自动化工具,在Web爬虫领域广泛应用。本指南将初步探讨Selenium的用法。
+
+### 安装和基本设置
+
+首先,安装Selenium和WebDriver:
+
+```bash
+pip install selenium
+```
+
+对于Chrome浏览器,还需要下载相应版本的ChromeDriver。
+
+#### Selenium的一个简单使用案例
+
+```python
+from selenium import webdriver
+
+url = 'https://baidu.com'
+driver = webdriver.Chrome()
+driver.get(url)
+
+# 使用Selenium模拟浏览器行为
+links = driver.find_elements_by_tag_name('a')
+for link in links:
+    print(link.get_attribute('href'))
+
+driver.quit()
+#  output 
+#http://news.baidu.com
+
+# http://www.hao123.com
+
+# http://map.baidu.com
+
+# http://v.baidu.com
+
+# http://tieba.baidu.com
+
+# http://www.baidu.com/bdorz/login.gif?login&tpl=mn&u=http%3A%2F%2Fwww.baidu.com%2f%3fbdorz_come%3d1
+
+# //www.baidu.com/more/
+
+# http://home.baidu.com
+
+# http://ir.baidu.com
+
+# http://www.baidu.com/duty/
+
+# http://jianyi.baidu.com/
+```
+
+在这个示例中，使用了`Selenium`库来模拟浏览器行为，打开网页并提取所有链接。`Selenium`可以执行JavaScript代码，并完全模拟用户的操作，从而绕过一些简单的反爬机制。
+
+
+### 高级配置选项
+
+#### 有头模式vs无头模式
+
+有头模式允许你看到浏览器的操作过程,适合调试:
+
+```python
+# 默认为有头模式
+driver = webdriver.Chrome(service=service, options=chrome_options)
+```
+
+无头模式在后台运行,适合生产环境:
+
+```python
+chrome_options.add_argument('--headless')
+driver = webdriver.Chrome(service=service, options=chrome_options)
+```
+
+#### 使用用户数据目录
+
+使用已存在的Chrome配置文件,保留登录状态和cookies:
+
+```python
+chrome_options.add_argument('--user-data-dir=/Users/aower/Library/Application Support/Google/Chrome/')
+driver = webdriver.Chrome(options=chrome_options)
+```
+
+#### 其他常用选项
+
+```python
+# 禁用GPU加速
+chrome_options.add_argument('--disable-gpu')
+
+# 禁用扩展
+chrome_options.add_argument('--disable-extensions')
+
+# 最大化窗口
+chrome_options.add_argument('--start-maximized')
+
+# 设置窗口大小
+chrome_options.add_argument('--window-size=1920,1080')
+
+# 禁用沙箱模式
+chrome_options.add_argument('--no-sandbox')
+```
+
+### 元素定位和操作
+
+#### 常用定位方法
+
+```python
+from selenium.webdriver.common.by import By
+
+# ID定位
+element = driver.find_element(By.ID, 'login')
+
+# 类名定位
+elements = driver.find_elements(By.CLASS_NAME, 'input-field')
+
+# CSS选择器定位
+element = driver.find_element(By.CSS_SELECTOR, '#login > input[type="text"]')
+
+# XPath定位
+element = driver.find_element(By.XPATH, '//button[contains(text(), "提交")]')
+```
+
+#### 等待元素加载
+
+显式等待:
+
+```python
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# 等待元素可点击
+element = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.ID, 'submit'))
+)
+```
+
+隐式等待:
+
+```python
+driver.implicitly_wait(10)  # 秒
+```
+
+#### 元素操作
+
+```python
+# 点击元素
+element.click()
+
+# 输入文本
+element.send_keys('Hello, World!')
+
+# 清除输入
+element.clear()
+
+# 获取文本
+text = element.text
+
+# 获取属性
+attribute = element.get_attribute('class')
+```
+
+#### 滚动页面
+
+滚动页面是一个常见且重要的操作，特别是对于动态加载内容的网页。以下是几种滚动页面的方法：
+
+##### 使用JavaScript滚动到页面底部
+
+```python
+def scroll_to_bottom(driver):
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+```
+
+##### 使用JavaScript滚动到指定元素
+
+```python
+def scroll_to_element(driver, element):
+    driver.execute_script("arguments[0].scrollIntoView();", element)
+```
+
+##### 使用ActionChains模拟滚轮操作
+
+```python
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
+
+def scroll_down(driver):
+    actions = ActionChains(driver)
+    actions.send_keys(Keys.PAGE_DOWN).perform()
+```
+
+##### 无限滚动页面的处理
+
+对于无限滚动的页面，我们可以使用循环来模拟连续滚动：
+
+```python
+def scroll_infinite_page(driver, max_scrolls=10):
+    scrolls = 0
+    last_height = driver.execute_script("return document.body.scrollHeight")
+
+    while scrolls < max_scrolls:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)  # 等待页面加载
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+        scrolls += 1
+```
+
+这个函数会持续滚动页面，直到达到最大滚动次数或页面高度不再增加（即已滚动到底部）。
+
+### 处理复杂登录场景
+
+#### 处理验证码
+
+对于图片验证码,可以使用OCR库如Tesseract:
+
+```python
+import pytesseract
+from PIL import Image
+import io
+
+# 获取验证码图片元素
+captcha_element = driver.find_element(By.ID, 'captcha-img')
+
+# 截图
+captcha_screenshot = captcha_element.screenshot_as_png
+
+# 使用PIL打开图片
+image = Image.open(io.BytesIO(captcha_screenshot))
+
+# 使用Tesseract识别验证码
+captcha_text = pytesseract.image_to_string(image)
+
+# 填入验证码
+driver.find_element(By.ID, 'captcha-input').send_keys(captcha_text)
+```
+
+#### 处理滑动验证码
+
+对于滑动验证码,可以使用ActionChains模拟拖动:
+
+```python
+from selenium.webdriver.common.action_chains import ActionChains
+
+# 找到滑块元素
+slider = driver.find_element(By.ID, 'slider')
+
+# 创建动作链
+action = ActionChains(driver)
+
+# 点击并保持,移动后释放
+action.click_and_hold(slider).move_by_offset(258, 0).release().perform()
+```
+
+#### 处理手机验证码
+
+对于需要手机验证码的情况,可以考虑以下方法:
+1. 使用虚拟手机号服务
+2. 集成SMS接收API
+3. 手动输入（在自动化过程中暂停,等待人工输入）
+
+```python
+# 等待人工输入验证码
+verification_code = input("请输入收到的验证码: ")
+driver.find_element(By.ID, 'verification-code-input').send_keys(verification_code)
+```
+
+#### 使用Cookies或Token登录
+
+如果已经获取了有效的Cookies或Token,可以直接注入:
+
+```python
+# 添加Cookie
+driver.get("https://example.com")
+driver.add_cookie({'name': 'session_id', 'value': 'your_session_id'})
+driver.refresh()  # 刷新页面以应用Cookie
+
+# 或者使用localStorage存储Token
+driver.execute_script("window.localStorage.setItem('auth_token', 'your_token_here');")
+```
+
+### 爬取整个网站
+
+#### 递归爬取
+
+```python
+import urllib.parse
+
+def crawl_site(url, base_url, visited=set()):
+    if url in visited:
+        return
+    
+    visited.add(url)
+    print(f"Crawling: {url}")
+
+    driver.get(url)
+    
+    # 获取页面内容
+    content = driver.find_element(By.TAG_NAME, 'body').text
+    # 这里可以保存或处理内容
+    
+    # 获取所有链接
+    links = driver.find_elements(By.TAG_NAME, 'a')
+    for link in links:
+        href = link.get_attribute('href')
+        if href and href.startswith(base_url):
+            full_url = urllib.parse.urljoin(base_url, href)
+            crawl_site(full_url, base_url, visited)
+
+# 使用示例
+base_url = "https://example.com"
+crawl_site(base_url, base_url)
+```
+
+#### 使用Sitemap
+
+如果网站提供Sitemap,可以更高效地爬取:
+
+```python
+import xml.etree.ElementTree as ET
+import requests
+
+def crawl_sitemap(sitemap_url):
+    response = requests.get(sitemap_url)
+    root = ET.fromstring(response.content)
+
+    for url in root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc'):
+        page_url = url.text
+        print(f"Crawling: {page_url}")
+        driver.get(page_url)
+        # 处理页面内容
+        # ...
+
+# 使用示例
+crawl_sitemap("https://example.com/sitemap.xml")
+```
+
+### 性能优化
+
+1. 使用无头模式减少资源消耗
+2. 禁用不必要的浏览器功能(如JavaScript, 图片加载)
+3. 使用多线程或异步方法并行爬取
+4. 实现智能限速和重试机制
+
+### 注意事项
+
+1. 遵守网站的robots.txt规则
+2. 控制爬取速度,避免对目标网站造成压力
+3. 定期检查和更新ChromeDriver版本
+4. 考虑使用代理IP轮换,避免IP封禁
+5. 遵守法律法规和网站使用条款
+
+通过深入理解和灵活运用这些Selenium高级技巧,你可以构建更强大、更可靠的爬虫系统。记住,爬虫技术的发展是一个持续的过程,需要不断学习和适应新的挑战。
+
+
+## undetected_chromedriver 深入指南：突破反爬限制
+
+### undetected_chromedriver 简介
+
+undetected_chromedriver 是一个专门设计用来绕过网站对 Selenium WebDriver 检测的 Python 库。它对标准的 ChromeDriver 进行了多项改进，使得自动化脚本更难被检测到。
+
+### undetected_chromedriver 的改进
+
+相比于标准的 ChromeDriver，undetected_chromedriver 主要做了以下改进：
+
+1. **修改 WebDriver 特征**：删除了一些容易被检测的 WebDriver 特征。
+
+2. **动态补丁**：在运行时动态修补 ChromeDriver，移除了可能被用于检测的标志。
+
+3. **随机化 UserAgent**：默认情况下使用随机的 UserAgent，使得每次会话看起来都不同。
+
+4. **模拟真实浏览器行为**：添加了一些模拟真实用户行为的特征。
+
+5. **CDN 下载**：自动从 Google 的 CDN 下载最新版本的 ChromeDriver，确保版本匹配。
+
+6. **禁用自动化控制器**：默认情况下禁用了可能暴露自动化的控制器。
+
+7. **WebGL 指纹随机化**：通过修改 WebGL 渲染，使每次会话的指纹都不同。
+
+### 如何使用 undetected_chromedriver
+
+#### 安装
+
+首先，安装 undetected_chromedriver：
+
+```bash
+pip install undetected-chromedriver
+```
+
+#### 基本使用
+
+以下是一个基本的使用示例：
+
+```python
+import undetected_chromedriver as uc
+import time
+
+# 创建 Chrome 实例
+driver = uc.Chrome()
+
+# 访问网页
+driver.get('https://bot.sannysoft.com')
+
+# 等待一段时间以查看结果
+time.sleep(5)
+
+# 关闭浏览器
+driver.quit()
+```
+
+#### 结合 Selenium 使用
+
+undetected_chromedriver 可以无缝地与 Selenium 结合使用。以下是一个例子：
+
+```python
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# 创建 Chrome 实例
+driver = uc.Chrome()
+
+# 访问网页
+driver.get('https://example.com')
+
+# 使用 Selenium 的等待机制
+wait = WebDriverWait(driver, 10)
+element = wait.until(EC.presence_of_element_located((By.ID, 'some-id')))
+
+# 使用 Selenium 的方法进行交互
+element.click()
+
+# 关闭浏览器
+driver.quit()
+```
+
+### 高级配置
+
+#### 自定义 ChromeOptions
+
+你可以传递自定义的 ChromeOptions 来进一步配置浏览器：
+
+```python
+import undetected_chromedriver as uc
+from selenium.webdriver.chrome.options import Options
+
+chrome_options = Options()
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--no-sandbox")
+
+driver = uc.Chrome(options=chrome_options)
+```
+
+#### 使用用户数据目录
+
+保持登录状态或使用特定的浏览器配置：
+
+```python
+import undetected_chromedriver as uc
+
+chrome_options = uc.ChromeOptions()
+chrome_options.add_argument(f"--user-data-dir=/path/to/your/chrome/profile")
+
+driver = uc.Chrome(options=chrome_options)
+```
+
+#### 配置代理
+
+使用代理来进一步隐藏你的真实 IP：
+
+```python
+import undetected_chromedriver as uc
+
+chrome_options = uc.ChromeOptions()
+chrome_options.add_argument('--proxy-server=http://your-proxy-address:port')
+
+driver = uc.Chrome(options=chrome_options)
+```
+
+### 修改浏览器指纹
+
+undetected_chromedriver 本身就能在一定程度上修改浏览器指纹，但你可以进一步自定义：
+
+#### 自定义 User-Agent
+
+```python
+import undetected_chromedriver as uc
+
+chrome_options = uc.ChromeOptions()
+chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+
+driver = uc.Chrome(options=chrome_options)
+```
+
+#### 禁用 WebRTC
+
+WebRTC 可能会泄露你的真实 IP 地址：
+
+```python
+import undetected_chromedriver as uc
+
+chrome_options = uc.ChromeOptions()
+chrome_options.add_argument('--disable-webrtc')
+
+driver = uc.Chrome(options=chrome_options)
+```
+
+#### 修改 Canvas 指纹
+
+通过执行 JavaScript 来修改 Canvas 指纹：
+
+```python
+import undetected_chromedriver as uc
+
+driver = uc.Chrome()
+
+# 注入 JavaScript 来修改 Canvas 指纹
+js_script = """
+    const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    HTMLCanvasElement.prototype.toDataURL = function(type) {
+        if (type === 'image/png' && this.width === 220 && this.height === 30) {
+            return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+        }
+        return originalToDataURL.apply(this, arguments);
+    };
+"""
+driver.execute_script(js_script)
+```
+
+### 实战案例：绕过 reCAPTCHA
+
+undetected_chromedriver 在处理 Google reCAPTCHA 时特别有效：
+
+```python
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+driver = uc.Chrome()
+driver.get('https://www.google.com/recaptcha/api2/demo')
+
+# 等待 reCAPTCHA iframe 加载
+WebDriverWait(driver, 10).until(EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, "iframe[src^='https://www.google.com/recaptcha/api2/anchor']")))
+
+# 点击 "I'm not a robot" 复选框
+WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "recaptcha-anchor"))).click()
+
+# 切换回主框架
+driver.switch_to.default_content()
+
+# 等待验证完成
+WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".recaptcha-success")))
+
+print("reCAPTCHA 验证成功！")
+
+driver.quit()
+```
+
+### 注意事项和最佳实践
+
+1. **版本匹配**：确保 undetected_chromedriver 的版本与你的 Chrome 浏览器版本兼容。
+
+2. **定期更新**：经常更新 undetected_chromedriver 以获取最新的反检测功能。
+
+3. **合理使用**：尽管 undetected_chromedriver 能够绕过许多检测，但仍应遵守网站的使用条款和爬虫礼仪。
+
+4. **配合其他技术**：结合使用代理、随机延迟等技术，进一步提高隐蔽性。
+
+5. **测试**：在正式使用前，先在 https://bot.sannysoft.com 等网站上测试你的配置。
+
+6. **错误处理**：实现robust的错误处理机制，以应对可能的检测和阻塞。
+
+### 结论
+
+undetected_chromedriver 是一个强大的工具，能够有效地绕过许多网站的反爬虫检测机制。通过巧妙地修改 ChromeDriver 的特征和行为，它使得自动化脚本更难被识别。然而，它并不是万能的解决方案。在使用时，我们仍需要注意网络爬虫的伦理问题，并尊重网站的使用条款。通过合理使用 undetected_chromedriver，结合其他反检测技术，我们可以构建更加强大和隐蔽的网络爬虫。

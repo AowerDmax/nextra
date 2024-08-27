@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://doc.aowerleee.online
+
+# Sitemaps
+Sitemap: https://doc.aowerleee.online/sitemap.xml

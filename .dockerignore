@@ -1,0 +1,32 @@
+# 忽略 node_modules 目录，依赖会在容器内安装
+node_modules
+
+# 忽略本地构建产物，除非需要复制到容器中
+# .next 和 public 目录需要复制到 Docker 容器中
+# 但如果你已经在本地构建完毕，只需要传输构建后的内容
+# 忽略不需要的文件或目录
+!.next/
+!.next/**
+!public/
+!public/**
+
+# 忽略环境变量文件，除非明确需要复制到容器中
+# 如果你有 .env 文件且需要复制到 Docker 容器中，请确保包含它
+!.env
+
+# 忽略 Dockerfile 和 .dockerignore 文件本身
+Dockerfile
+.dockerignore
+
+# 忽略本地操作系统生成的临时文件
+.DS_Store
+
+# 忽略 Git 目录
+.git
+.gitignore
+
+# 忽略日志文件
+*.log
+
+# 忽略编辑器产生的临时文件
+*.swp

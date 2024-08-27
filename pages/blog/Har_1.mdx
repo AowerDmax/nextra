@@ -1,0 +1,195 @@
+---
+title: HAR:初步介绍,特性和功能
+date: 2024/08/06
+description: HAR功能以及特性介绍,以及实战讲解HAR分析ChatGPT
+tags:
+  - Har
+  - ChatGPT请求体分析
+  - ChatGPT响应体分析
+ogImage: /images/blog/Har.webp
+authorid: aower
+---
+
+import { BlogHeader } from '@/components/blog/BlogHeader'
+
+<BlogHeader />
+
+## Har 的介绍和 GPT 的初步分析(一)
+
+2022 年 11 月,OpenAI 发布了他们划时代的产品：**ChatGPT**。从它出生起,我就对这个神秘的,像黑盒子一样的问答机器人充满了好奇.
+
+1. 它是如何拥有如此之长的上下文,以至于一个对话再经过多轮消息后,他仍然保留最开始的记忆.
+2. 它是如何生成图片的?为什么他能区分应该生成图片还是输出文字?
+3. 它是如何调用 Function Calling 的? 它是如何能够运行代码的?运行代码的时候能保证安全吗?
+4. 为什么有时候 ChatGPT 甚至会记得不同 Conversation 中的消息?
+5. 它是如何调用天气工具查看天气,如何调用联网工具获取网络信息的呢?
+
+这些问题不断的缠绕着我,终于我决定对 ChatGPT 下手了.
+
+首先先来介绍一下本文使用的工具,通常我们会用浏览器的 F12 打开 Chrome dev Tools 的 network 来查看访问一个网站的请求和响应.
+
+但是 ChatGPT 使用了一种 SSE 的响应式返回,他会每次会全量更新,在这种海量数据下人工的手动分析显得非常的困难和费力.
+
+并且 ChatGPT 包含的请求和响应种类相当的多.
+
+比如说:
+
+在同一个 conversation 下第一次发送 Message 和第二次发送 Messag ,对应的请求体会不会有什么不同?
+
+生成图片,查询网页,文本输出, Function Calling, 文本输出 产生的 Response 有什么不同?
+
+
+所以引出本文使用到分析 `Request` 和 `Response`的工具 `Har`文件.
+
+## 什么是 HAR 文件？
+
+HAR（HTTP Archive，HTTP 存档文件）文件是一种记录网络浏览器和服务器之间所有通信的格式。它主要用于记录和分析网络请求和响应，帮助开发者、测试人员和网络分析师了解和调试网页性能问题。生成 HAR 文件的方式有几种，常见的方法包括使用浏览器的开发者工具（如 Chrome DevTools），通过命令行工具（如 `curl` 或 `wget` 配合 HAR 扩展）生成，或使用自动化测试框架（如 Selenium 和 Puppeteer）来记录网络活动。或者是使用抓包工具,比如 `Fiddler` 以及 `ProxyMan`
+
+### HAR 文件的用途
+
+1. **性能分析**：通过分析 HAR 文件，可以识别网页加载的瓶颈，例如哪些资源加载时间过长。
+2. **问题诊断**：当用户报告网页加载或交互问题时，可以通过 HAR 文件重现并诊断问题。
+3. **安全分析**：HAR 文件可以显示所有的网络请求和响应，包括敏感数据传输，帮助识别潜在的安全漏洞。
+4. **日志记录**：在开发和测试过程中，HAR 文件可以作为网络活动的日志，记录不同时间点的网络状态。
+
+### HAR 文件的结构
+
+一个 HAR 文件包含多个部分，每个部分都记录了不同类型的信息。以下是 HAR 文件的主要结构和内容：
+
+1. **log**：这是 HAR 文件的根对象，包含了整个记录的基本信息。
+   - **version**：HAR 文件格式的版本号。
+   - **creator**：创建 HAR 文件的工具信息，包括工具名称和版本。
+   - **pages**：一个数组，包含所有页面的信息。
+   - **entries**：一个数组，包含所有的 HTTP 请求和响应信息。
+2. **pages**：记录了每个页面的基本信息。
+   - **startedDateTime**：页面开始加载的时间。
+   - **id**：页面的唯一标识符。
+   - **title**：页面的标题。
+   - **pageTimings**：页面加载的时间信息。
+3. **entries**：记录了每个 HTTP 请求和响应的详细信息。
+   - **startedDateTime**：请求开始的时间。
+   - **time**：请求和响应的总时间。
+   - **request**：请求的详细信息，包括方法、URL、HTTP 版本、头信息和数据负载。
+   - **response**：响应的详细信息，包括状态、HTTP 版本、头信息和数据负载。
+   - **cache**：缓存的相关信息。
+   - **timings**：请求的时间信息，包括重定向时间、DNS 解析时间、连接时间等。
+
+### 如何分析 HAR 文件
+
+分析 HAR 文件通常涉及检查每个请求和响应的详细信息，以识别潜在的问题。以下是一些常见的分析步骤：
+
+1. **检查总加载时间**：查看页面的总加载时间，识别是否有明显的延迟。
+2. **分析慢速请求**：找出哪些请求花费的时间最多，检查这些请求的详细信息，包括服务器响应时间和数据传输时间。
+3. **检查错误请求**：查看是否有任何失败的请求，检查响应状态码和错误消息，以确定问题的根源。
+4. **优化资源加载**：检查静态资源（如图片、CSS、JavaScript）的加载时间，考虑使用压缩、缓存和内容分发网络（CDN）来优化加载时间。
+
+### 实战
+
+下面是一段 `python` 代码,用于记录所有 `请求地址` 为 `https://chatgpt.com/backend-api/conversation`的 `请求方法` 为 `POST` 所有的 `Request` 和 `Response` . 包括 `Header` 和 `Body`
+
+```python
+import json
+import re
+import logging
+
+class HarExtractor:
+    def __init__(self, har_file_path):
+        self.har_file_path = har_file_path
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+
+        # 移除所有处理程序，包括根记录器的处理程序
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+
+        # 添加文件处理程序
+        handler = logging.FileHandler('HarExtract.log', mode='w', encoding='utf-8')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+
+    def load_har_file(self):
+        with open(self.har_file_path, 'r', encoding='utf-8') as f:
+            self.har_data = json.load(f)
+
+    @staticmethod
+    def decode_unicode_escape(json_str):
+        return json_str.encode('utf-8').decode('unicode_escape')
+
+    def extract_entries(self):
+        URL_pattern = re.compile(r'^https://chatgpt.com/backend-api/conversation$')
+        Method_pattern = re.compile(r'^POST$')
+
+        for entry in self.har_data['log']['entries']:
+            request = entry['request']
+            response = entry['response']
+
+            if URL_pattern.match(request['url']) and Method_pattern.match(request['method']):
+                self.log_request_response(request, response, entry['time'])
+
+    def log_request_response(self, request, response, time):
+        self.logger.info(f"Request URL: {request['url']}")
+        self.logger.info(f"Request Method: {request['method']}")
+        self.logger.info(f"Response Status: {response['status']} {response['statusText']}")
+        self.logger.info(f"Time: {time} ms")
+
+        self.logger.info("Request Headers:")
+        for header in request['headers']:
+            self.logger.info(f"  {header['name']}: {header['value']}")
+
+        if 'postData' in request:
+            self.logger.info("Request Body:")
+            self.logger.info(request['postData']['text'])
+
+        self.logger.info("Response Headers:")
+        for header in response['headers']:
+            self.logger.info(f"  {header['name']}: {header['value']}")
+
+        if 'text' in response['content']:
+            self.logger.info("Response Body:")
+            response_body = HarExtractor.decode_unicode_escape(response['content']['text'])
+            self.logger.info(response_body)
+
+        self.logger.info("-" * 80)
+
+if __name__ == "__main__":
+    har_extractor = HarExtractor('SourceHar/chatgpt_firefox.har')
+    har_extractor.load_har_file()
+    har_extractor.extract_entries()
+```
+
+在你运行完这个文件之后,会多出一个 `HarExtract.log` 文件,里面详细的包含了你询问 ChatGPT 时,他发送的所有 `Header` 和 `Body`. 里面包含 `OAI-Device-Id`, `OpenAI-Sentinel-Arkose-Token`, `OpenAI-Sentinel-Turnstile-Token`, `OpenAI-Sentinel-Proof-Token`,`Cookie`以及 `AccessToken`.
+
+目前有很多开源项目,通过 Har 文件来将 ChatGPT 的 `Web` 转 `API`.当然我们是遵纪守法的好公民.我们只是来学习一下 ChatGPT 的请求体和响应体,来看看 ChatGPT 到底是如何运作的.
+
+请收看第二章, [Har(二) Request Body](/blog/Har_2)
+
+
+> 备注
+
+虽然教程里面写的是使用 `Chrome` 进行的获取 `Har`文件, 但是 如果你使用`chrome` 内核的浏览器,大概率获得的`Har` 文件是被裁减过后的, 这是因为`responseBodyLimit` 往往有一个限制的大小.
+
+而 `chatgpt` 采用流式全量返回,基本上必定超出大小.
+
+解决方案就是使用 `Firefox`, 然后地址栏输入 https://bugzilla.mozilla.org/show_bug.cgi?id=1223726 Open about:config and change devtools.netmonitor.responseBodyLimit from default value 1048576 to your desired size in bytes.
+
+解决方案的来源: https://stackoverflow.com/questions/73724359/how-to-make-browser-developer-tools-save-har-file-containing-untruncated-respons
+
+
+> 下面是本次分析所有的问答
+
+我进行了总共七次问答
+
+1. 给他一段超级长的文本,让他重写(测试输出超长文本)
+2. 继续(继续输出超长文本没有写完的内容)
+3. 1-100 之和(测试 Function Calling)
+4. 洛杉矶天气(测试 Browser Tool)
+5. 绘制统计图(Function Calling)
+6. 对话(text completion)
+7. 生成图(Image Generation)
+
+![](https://cdn.professoryin.online/aower-gpt/2024/8/46f118b5d65c96ba7cd465a06e7ea7e3.png)
+![](https://cdn.professoryin.online/aower-gpt/2024/8/228da1c735324efe35be2cb8406babe8.png)
+![](https://cdn.professoryin.online/aower-gpt/2024/8/c6b5538b99f6d72736f36520980c5357.png)
+![](https://cdn.professoryin.online/aower-gpt/2024/8/416c3dede9510d18e01a5b05bf79aca3.png)
+![](https://cdn.professoryin.online/aower-gpt/2024/8/37166b91ddd71c0b4dccf7ff4a4eb125.png)

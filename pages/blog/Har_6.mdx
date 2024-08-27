@@ -1,0 +1,280 @@
+---
+title: HAR:Chatgpt之Function Calling 分析
+date: 2024/08/06
+description: 分析Chatgpt调用Function Calling的响应
+tags:
+  - Har
+  - ChatGPT响应体分析
+  - ChatGPT Function Calling 分析
+ogImage: /images/blog/Har.webp
+authorid: aower
+---
+
+import { BlogHeader } from '@/components/blog/BlogHeader'
+
+<BlogHeader />
+
+## GPT Response Body 的分析(二) Function Calling
+
+贴一下流程, 自己的项目没用到,暂时没看
+
+### 日志
+
+```bash
+2024-07-31 17:04:15,502 - INFO - Request Body Content: 使用function calling 编写1-100的和
+2024-07-31 17:04:15,502 - INFO - messages: [
+2024-07-31 17:04:15,502 - INFO -   {
+2024-07-31 17:04:15,502 - INFO -     "id": "75aae912-a4a0-45ce-ba1a-138ea9b2bc56",
+2024-07-31 17:04:15,502 - INFO -     "data": {"message": {"id": "75aae912-a4a0-45ce-ba1a-138ea9b2bc56", "author": {"role": "assistant", "name": null, "metadata": {}}, "create_time": 1722363394.172116, "update_time": null, "content": {"content_type": "code", "language": "unknown", "response_format_name": null, "text": "# Calculate the sum of numbers from 1 to 100
+total_sum = sum(range(1, 101))
+total_sum"}, "status": "finished_successfully", "end_turn": false, "weight": 1.0, "metadata": {"citations": [], "gizmo_id": null, "message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "parent_id": "aaa234b6-e61e-43c8-9d53-2f54be6d752c", "finish_details": {"type": "stop", "stop_tokens": [200007]}, "is_complete": true, "model_switcher_deny": [{"slug": "gpt-4o-mini", "context": "regenerate", "reason": "unsupported_tool_use", "description": "此模型不支持使用工具。"}, {"slug": "gpt-4o-mini", "context": "conversation", "reason": "unsupported_tool_use", "description": "此模型不支持使用工具。"}]}, "recipient": "python", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,502 - INFO -   },
+2024-07-31 17:04:15,502 - INFO -   {
+2024-07-31 17:04:15,502 - INFO -     "id": "e5dd2792-f1a1-4ea1-b18d-2373914d5a8e",
+2024-07-31 17:04:15,502 - INFO -     "data": {"message": {"id": "e5dd2792-f1a1-4ea1-b18d-2373914d5a8e", "author": {"role": "tool", "name": "python", "metadata": {}}, "create_time": 1722363397.1929133, "update_time": 1722363397.4739487, "content": {"content_type": "execution_output", "text": "5050"}, "status": "finished_successfully", "end_turn": null, "weight": 1.0, "metadata": {"is_complete": true, "aggregate_result": {"status": "success", "run_id": "ee2db79b-c214-45da-a538-0738abc40c83", "start_time": 1722363397.1929133, "update_time": 1722363397.4739487, "code": "# Calculate the sum of numbers from 1 to 100
+total_sum = sum(range(1, 101))
+total_sum", "end_time": 1722363397.4739487, "final_expression_output": "5050", "in_kernel_exception": null, "system_exception": null, "messages": [], "jupyter_messages": [{"msg_type": "status", "parent_header": {"msg_id": "9123e3c6-d6e3af2cae53fd7e9a934d3a_3_1", "version": "5.3"}, "content": {"execution_state": "busy"}}, {"msg_type": "execute_input", "parent_header": {"msg_id": "9123e3c6-d6e3af2cae53fd7e9a934d3a_3_1", "version": "5.3"}}, {"msg_type": "execute_result", "parent_header": {"msg_id": "9123e3c6-d6e3af2cae53fd7e9a934d3a_3_1", "version": "5.3"}, "content": {"data": {"text/plain": "5050"}}}, {"msg_type": "status", "parent_header": {"msg_id": "9123e3c6-d6e3af2cae53fd7e9a934d3a_3_1", "version": "5.3"}, "content": {"execution_state": "idle"}}], "timeout_triggered": null}, "message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "parent_id": "75aae912-a4a0-45ce-ba1a-138ea9b2bc56", "model_switcher_deny": [{"slug": "gpt-4o-mini", "context": "regenerate", "reason": "unsupported_tool_use", "description": "此模型不支持使用工具。"}, {"slug": "gpt-4o-mini", "context": "conversation", "reason": "unsupported_tool_use", "description": "此模型不支持使用工具。"}]}, "recipient": "all", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,502 - INFO -   },
+2024-07-31 17:04:15,502 - INFO -   {
+2024-07-31 17:04:15,502 - INFO -     "id": "8da09382-df15-4966-9b4e-e0b4d35acf89",
+2024-07-31 17:04:15,502 - INFO -     "data": {"message": {"id": "8da09382-df15-4966-9b4e-e0b4d35acf89", "author": {"role": "assistant", "name": null, "metadata": {}}, "create_time": 1722363397.515904, "update_time": null, "content": {"content_type": "text", "parts": ["1到100的和是5050。"]}, "status": "finished_successfully", "end_turn": true, "weight": 1.0, "metadata": {"citations": [], "gizmo_id": null, "message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "pad": "AAAAAAAAAAAAAAA", "parent_id": "e5dd2792-f1a1-4ea1-b18d-2373914d5a8e", "finish_details": {"type": "stop", "stop_tokens": [200002]}, "is_complete": true, "model_switcher_deny": [{"slug": "gpt-4o-mini", "context": "regenerate", "reason": "unsupported_tool_use", "description": "此模型不支持使用工具。"}, {"slug": "gpt-4o-mini", "context": "conversation", "reason": "unsupported_tool_use", "description": "此模型不支持使用工具。"}]}, "recipient": "all", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,502 - INFO -   },
+2024-07-31 17:04:15,502 - INFO -   {
+2024-07-31 17:04:15,502 - INFO -     "id": "no_message_key288f3d8402e243639091819f335f5dbb",
+2024-07-31 17:04:15,502 - INFO -     "data": {"type": "conversation_detail_metadata", "banner_info": null, "blocked_features": [], "model_limits": [], "default_model_slug": "gpt-4o", "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf"}
+2024-07-31 17:04:15,502 - INFO -   },
+2024-07-31 17:04:15,502 - INFO - ]
+2024-07-31 17:04:15,502 - INFO - --------------------------------------------------------------------------------
+```
+
+### json 结构
+
+```bash
+[
+  {
+    "75aae912-a4a0-45ce-ba1a-138ea9b2bc56": {
+      "message": {
+        "id": "75aae912-a4a0-45ce-ba1a-138ea9b2bc56",
+        "author": {
+          "role": "assistant",
+          "name": null,
+          "metadata": {}
+        },
+        "create_time": 1722363394.172116,
+        "update_time": null,
+        "content": {
+          "content_type": "code",
+          "language": "unknown",
+          "response_format_name": null,
+          "text": "# Calculate the sum of numbers from 1 to 100\r\ntotal_sum = sum(range(1, 101))\r\ntotal_sum"
+        },
+        "status": "finished_successfully",
+        "end_turn": false,
+        "weight": 1.0,
+        "metadata": {
+          "citations": [],
+          "gizmo_id": null,
+          "message_type": "next",
+          "model_slug": "gpt-4o",
+          "default_model_slug": "gpt-4o",
+          "parent_id": "aaa234b6-e61e-43c8-9d53-2f54be6d752c",
+          "finish_details": {
+            "type": "stop",
+            "stop_tokens": [
+              200007
+            ]
+          },
+          "is_complete": true,
+          "model_switcher_deny": [
+            {
+              "slug": "gpt-4o-mini",
+              "context": "regenerate",
+              "reason": "unsupported_tool_use",
+              "description": "此模型不支持使用工具。"
+            },
+            {
+              "slug": "gpt-4o-mini",
+              "context": "conversation",
+              "reason": "unsupported_tool_use",
+              "description": "此模型不支持使用工具。"
+            }
+          ]
+        },
+        "recipient": "python",
+        "channel": null
+      },
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+      "error": null
+    }
+  },
+  {
+    "e5dd2792-f1a1-4ea1-b18d-2373914d5a8e": {
+      "message": {
+        "id": "e5dd2792-f1a1-4ea1-b18d-2373914d5a8e",
+        "author": {
+          "role": "tool",
+          "name": "python",
+          "metadata": {}
+        },
+        "create_time": 1722363397.1929133,
+        "update_time": 1722363397.4739487,
+        "content": {
+          "content_type": "execution_output",
+          "text": "5050"
+        },
+        "status": "finished_successfully",
+        "end_turn": null,
+        "weight": 1.0,
+        "metadata": {
+          "is_complete": true,
+          "aggregate_result": {
+            "status": "success",
+            "run_id": "ee2db79b-c214-45da-a538-0738abc40c83",
+            "start_time": 1722363397.1929133,
+            "update_time": 1722363397.4739487,
+            "code": "# Calculate the sum of numbers from 1 to 100\r\ntotal_sum = sum(range(1, 101))\r\ntotal_sum",
+            "end_time": 1722363397.4739487,
+            "final_expression_output": "5050",
+            "in_kernel_exception": null,
+            "system_exception": null,
+            "messages": [],
+            "jupyter_messages": [
+              {
+                "msg_type": "status",
+                "parent_header": {
+                  "msg_id": "9123e3c6-d6e3af2cae53fd7e9a934d3a_3_1",
+                  "version": "5.3"
+                },
+                "content": {
+                  "execution_state": "busy"
+                }
+              },
+              {
+                "msg_type": "execute_input",
+                "parent_header": {
+                  "msg_id": "9123e3c6-d6e3af2cae53fd7e9a934d3a_3_1",
+                  "version": "5.3"
+                }
+              },
+              {
+                "msg_type": "execute_result",
+                "parent_header": {
+                  "msg_id": "9123e3c6-d6e3af2cae53fd7e9a934d3a_3_1",
+                  "version": "5.3"
+                },
+                "content": {
+                  "data": {
+                    "text/plain": "5050"
+                  }
+                }
+              },
+              {
+                "msg_type": "status",
+                "parent_header": {
+                  "msg_id": "9123e3c6-d6e3af2cae53fd7e9a934d3a_3_1",
+                  "version": "5.3"
+                },
+                "content": {
+                  "execution_state": "idle"
+                }
+              }
+            ],
+            "timeout_triggered": null
+          },
+          "message_type": "next",
+          "model_slug": "gpt-4o",
+          "default_model_slug": "gpt-4o",
+          "parent_id": "75aae912-a4a0-45ce-ba1a-138ea9b2bc56",
+          "model_switcher_deny": [
+            {
+              "slug": "gpt-4o-mini",
+              "context": "regenerate",
+              "reason": "unsupported_tool_use",
+              "description": "此模型不支持使用工具。"
+            },
+            {
+              "slug": "gpt-4o-mini",
+              "context": "conversation",
+              "reason": "unsupported_tool_use",
+              "description": "此模型不支持使用工具。"
+            }
+          ]
+        },
+        "recipient": "all",
+        "channel": null
+      },
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+      "error": null
+    }
+  },
+  {
+    "8da09382-df15-4966-9b4e-e0b4d35acf89": {
+      "message": {
+        "id": "8da09382-df15-4966-9b4e-e0b4d35acf89",
+        "author": {
+          "role": "assistant",
+          "name": null,
+          "metadata": {}
+        },
+        "create_time": 1722363397.515904,
+        "update_time": null,
+        "content": {
+          "content_type": "text",
+          "parts": [
+            "1到100的和是5050。"
+          ]
+        },
+        "status": "finished_successfully",
+        "end_turn": true,
+        "weight": 1.0,
+        "metadata": {
+          "citations": [],
+          "gizmo_id": null,
+          "message_type": "next",
+          "model_slug": "gpt-4o",
+          "default_model_slug": "gpt-4o",
+          "pad": "AAAAAAAAAAAAAAA",
+          "parent_id": "e5dd2792-f1a1-4ea1-b18d-2373914d5a8e",
+          "finish_details": {
+            "type": "stop",
+            "stop_tokens": [
+              200002
+            ]
+          },
+          "is_complete": true,
+          "model_switcher_deny": [
+            {
+              "slug": "gpt-4o-mini",
+              "context": "regenerate",
+              "reason": "unsupported_tool_use",
+              "description": "此模型不支持使用工具。"
+            },
+            {
+              "slug": "gpt-4o-mini",
+              "context": "conversation",
+              "reason": "unsupported_tool_use",
+              "description": "此模型不支持使用工具。"
+            }
+          ]
+        },
+        "recipient": "all",
+        "channel": null
+      },
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+      "error": null
+    }
+  },
+  {
+    "no_message_key288f3d8402e243639091819f335f5dbb": {
+      "type": "conversation_detail_metadata",
+      "banner_info": null,
+      "blocked_features": [],
+      "model_limits": [],
+      "default_model_slug": "gpt-4o",
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf"
+    }
+  }
+]
+```
+
+![](https://cdn.professoryin.online/aower-gpt/2024/8/57f9a8bc85fbee90a238288143064f5a.png)

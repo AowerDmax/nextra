@@ -1,0 +1,299 @@
+---
+title: HAR:Chatgpt之Image Generation 分析
+date: 2024/08/06
+description: 分析Chatgpt调用Image Generation的响应
+tags:
+  - Har
+  - ChatGPT响应体分析
+  - ChatGPT Image Generation分析
+ogImage: /images/blog/Har.webp
+authorid: aower
+---
+
+import { BlogHeader } from '@/components/blog/BlogHeader'
+
+<BlogHeader />
+
+## GPT Response Body 的分析(四) Image Generation
+
+贴一下流程, 自己的项目没用到,暂时没看
+
+### 日志
+
+```bash
+2024-07-31 17:04:15,507 - INFO - Request Body Content: 给我一张穿着黑色皮衣的韩国美女的图片,长发,有一把伞
+2024-07-31 17:04:15,507 - INFO - messages: [
+2024-07-31 17:04:15,507 - INFO -   {
+2024-07-31 17:04:15,507 - INFO -     "id": "184a69d8-704b-40b5-acea-f06c99cd0fb3",
+2024-07-31 17:04:15,507 - INFO -     "data": {"message": {"id": "184a69d8-704b-40b5-acea-f06c99cd0fb3", "author": {"role": "assistant", "name": null, "metadata": {}}, "create_time": 1722363578.169956, "update_time": null, "content": {"content_type": "text", "parts": ["{"size":"1024x1024","prompt":"A Korean woman with long hair wearing a stylish black leather jacket, holding an umbrella. She has a confident and elegant expression. The background is a rainy urban setting with blurred city lights, giving a moody and atmospheric feel. The woman stands with a slight pose, showcasing the sleek design of her leather jacket and the umbrella she holds. The overall style is chic and modern."}"]}, "status": "finished_successfully", "end_turn": false, "weight": 1.0, "metadata": {"citations": [], "gizmo_id": null, "message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "pad": "AAAAAAAAAAAAAAAAAAAAAA", "parent_id": "aaa212b3-88d8-4069-af37-8ba91f082674", "finish_details": {"type": "stop", "stop_tokens": [200007]}, "is_complete": true, "model_switcher_deny": [{"slug": "gpt-4o-mini", "context": "regenerate", "reason": "unsupported_image", "description": "此模型不支持图片。"}, {"slug": "gpt-4o-mini", "context": "conversation", "reason": "unsupported_image", "description": "此模型不支持图片。"}]}, "recipient": "dalle.text2im", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,507 - INFO -   },
+2024-07-31 17:04:15,507 - INFO -   {
+2024-07-31 17:04:15,507 - INFO -     "id": "ee99443d-9af5-450e-8720-550b7002f64d",
+2024-07-31 17:04:15,507 - INFO -     "data": {"message": {"id": "ee99443d-9af5-450e-8720-550b7002f64d", "author": {"role": "tool", "name": "dalle.text2im", "metadata": {}}, "create_time": null, "update_time": null, "content": {"content_type": "multimodal_text", "parts": [{"content_type": "image_asset_pointer", "asset_pointer": "file-service://file-ej91xcOGLdaexatgtiDfXjJe", "size_bytes": 306402, "width": 1024, "height": 1024, "fovea": 512, "metadata": {"dalle": {"gen_id": "Sk4bV4UyjbuRipFq", "prompt": "A Korean woman with long hair wearing a stylish black leather jacket, holding an umbrella. She has a confident and elegant expression. The background is a rainy urban setting with blurred city lights, giving a moody and atmospheric feel. The woman stands with a slight pose, showcasing the sleek design of her leather jacket and the umbrella she holds. The overall style is chic and modern.", "seed": 298628653, "parent_gen_id": null, "edit_op": null, "serialization_title": "DALL-E generation metadata"}, "gizmo": null, "sanitized": false}}]}, "status": "finished_successfully", "end_turn": null, "weight": 1.0, "metadata": {"message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "parent_id": "184a69d8-704b-40b5-acea-f06c99cd0fb3", "model_switcher_deny": [{"slug": "gpt-4o-mini", "context": "regenerate", "reason": "unsupported_image", "description": "此模型不支持图片。"}, {"slug": "gpt-4o-mini", "context": "conversation", "reason": "unsupported_image", "description": "此模型不支持图片。"}]}, "recipient": "all", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,507 - INFO -   },
+2024-07-31 17:04:15,507 - INFO -   {
+2024-07-31 17:04:15,507 - INFO -     "id": "33ae3bad-9473-4123-905f-a5f7fc1c8eda",
+2024-07-31 17:04:15,507 - INFO -     "data": {"message": {"id": "33ae3bad-9473-4123-905f-a5f7fc1c8eda", "author": {"role": "tool", "name": "dalle.text2im", "metadata": {}}, "create_time": null, "update_time": null, "content": {"content_type": "text", "parts": ["
+DALL·E displayed 1 images. The images are already plainly visible, so don't repeat the descriptions in detail. Do not list download links as they are available in the ChatGPT UI already. The user may download the images by clicking on them, but do not mention anything about downloading to the user."]}, "status": "finished_successfully", "end_turn": null, "weight": 1.0, "metadata": {"message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "pad": "AAAAAAAAAAAAAAA", "parent_id": "ee99443d-9af5-450e-8720-550b7002f64d", "model_switcher_deny": [{"slug": "gpt-4o-mini", "context": "regenerate", "reason": "unsupported_image", "description": "此模型不支持图片。"}, {"slug": "gpt-4o-mini", "context": "conversation", "reason": "unsupported_image", "description": "此模型不支持图片。"}]}, "recipient": "all", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,507 - INFO -   },
+2024-07-31 17:04:15,507 - INFO -   {
+2024-07-31 17:04:15,507 - INFO -     "id": "0f94bc67-fcec-4886-8c7f-4084c25952b4",
+2024-07-31 17:04:15,507 - INFO -     "data": {"message": {"id": "0f94bc67-fcec-4886-8c7f-4084c25952b4", "author": {"role": "assistant", "name": null, "metadata": {}}, "create_time": 1722363588.829103, "update_time": null, "content": {"content_type": "text", "parts": ["这里是您要求的穿着黑色皮衣、手持伞的长发韩国美女的图片。如果有其他需求或需要进一步修改，请告诉我！"]}, "status": "finished_successfully", "end_turn": true, "weight": 1.0, "metadata": {"citations": [], "gizmo_id": null, "finish_details": {"type": "stop", "stop_tokens": [200002]}, "is_complete": true, "message_type": "next", "model_slug": "gpt-4o", "default_model_slug": "gpt-4o", "pad": "AAAAAAAAAAA", "parent_id": "33ae3bad-9473-4123-905f-a5f7fc1c8eda", "model_switcher_deny": [{"slug": "gpt-4o-mini", "context": "regenerate", "reason": "unsupported_image", "description": "此模型不支持图片。"}, {"slug": "gpt-4o-mini", "context": "conversation", "reason": "unsupported_image", "description": "此模型不支持图片。"}]}, "recipient": "all", "channel": null}, "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf", "error": null}
+2024-07-31 17:04:15,507 - INFO -   },
+2024-07-31 17:04:15,507 - INFO -   {
+2024-07-31 17:04:15,507 - INFO -     "id": "no_message_key75178873e24c4e30aaa38c2dd44c210d",
+2024-07-31 17:04:15,507 - INFO -     "data": {"type": "conversation_detail_metadata", "banner_info": null, "blocked_features": [], "model_limits": [], "default_model_slug": "gpt-4o", "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf"}
+2024-07-31 17:04:15,507 - INFO -   },
+2024-07-31 17:04:15,507 - INFO - ]
+2024-07-31 17:04:15,507 - INFO - --------------------------------------------------------------------------------
+
+```
+
+### json 结构
+
+```bash
+[
+  {
+    "184a69d8-704b-40b5-acea-f06c99cd0fb3": {
+      "message": {
+        "id": "184a69d8-704b-40b5-acea-f06c99cd0fb3",
+        "author": {
+          "role": "assistant",
+          "name": null,
+          "metadata": {}
+        },
+        "create_time": 1722363578.169956,
+        "update_time": null,
+        "content": {
+          "content_type": "text",
+          "parts": [
+            "{\"size\":\"1024x1024\",\"prompt\":\"A Korean woman with long hair wearing a stylish black leather jacket, holding an umbrella. She has a confident and elegant expression. The background is a rainy urban setting with blurred city lights, giving a moody and atmospheric feel. The woman stands with a slight pose, showcasing the sleek design of her leather jacket and the umbrella she holds. The overall style is chic and modern.\"}"
+          ]
+        },
+        "status": "finished_successfully",
+        "end_turn": false,
+        "weight": 1.0,
+        "metadata": {
+          "citations": [],
+          "gizmo_id": null,
+          "message_type": "next",
+          "model_slug": "gpt-4o",
+          "default_model_slug": "gpt-4o",
+          "pad": "AAAAAAAAAAAAAAAAAAAAAA",
+          "parent_id": "aaa212b3-88d8-4069-af37-8ba91f082674",
+          "finish_details": {
+            "type": "stop",
+            "stop_tokens": [
+              200007
+            ]
+          },
+          "is_complete": true,
+          "model_switcher_deny": [
+            {
+              "slug": "gpt-4o-mini",
+              "context": "regenerate",
+              "reason": "unsupported_image",
+              "description": "此模型不支持图片。"
+            },
+            {
+              "slug": "gpt-4o-mini",
+              "context": "conversation",
+              "reason": "unsupported_image",
+              "description": "此模型不支持图片。"
+            }
+          ]
+        },
+        "recipient": "dalle.text2im",
+        "channel": null
+      },
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+      "error": null
+    }
+  },
+  {
+    "ee99443d-9af5-450e-8720-550b7002f64d": {
+      "message": {
+        "id": "ee99443d-9af5-450e-8720-550b7002f64d",
+        "author": {
+          "role": "tool",
+          "name": "dalle.text2im",
+          "metadata": {}
+        },
+        "create_time": null,
+        "update_time": null,
+        "content": {
+          "content_type": "multimodal_text",
+          "parts": [
+            {
+              "content_type": "image_asset_pointer",
+              "asset_pointer": "file-service://file-ej91xcOGLdaexatgtiDfXjJe",
+              "size_bytes": 306402,
+              "width": 1024,
+              "height": 1024,
+              "fovea": 512,
+              "metadata": {
+                "dalle": {
+                  "gen_id": "Sk4bV4UyjbuRipFq",
+                  "prompt": "A Korean woman with long hair wearing a stylish black leather jacket, holding an umbrella. She has a confident and elegant expression. The background is a rainy urban setting with blurred city lights, giving a moody and atmospheric feel. The woman stands with a slight pose, showcasing the sleek design of her leather jacket and the umbrella she holds. The overall style is chic and modern.",
+                  "seed": 298628653,
+                  "parent_gen_id": null,
+                  "edit_op": null,
+                  "serialization_title": "DALL-E generation metadata"
+                },
+                "gizmo": null,
+                "sanitized": false
+              }
+            }
+          ]
+        },
+        "status": "finished_successfully",
+        "end_turn": null,
+        "weight": 1.0,
+        "metadata": {
+          "message_type": "next",
+          "model_slug": "gpt-4o",
+          "default_model_slug": "gpt-4o",
+          "parent_id": "184a69d8-704b-40b5-acea-f06c99cd0fb3",
+          "model_switcher_deny": [
+            {
+              "slug": "gpt-4o-mini",
+              "context": "regenerate",
+              "reason": "unsupported_image",
+              "description": "此模型不支持图片。"
+            },
+            {
+              "slug": "gpt-4o-mini",
+              "context": "conversation",
+              "reason": "unsupported_image",
+              "description": "此模型不支持图片。"
+            }
+          ]
+        },
+        "recipient": "all",
+        "channel": null
+      },
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+      "error": null
+    }
+  },
+  {
+    "33ae3bad-9473-4123-905f-a5f7fc1c8eda": {
+      "message": {
+        "id": "33ae3bad-9473-4123-905f-a5f7fc1c8eda",
+        "author": {
+          "role": "tool",
+          "name": "dalle.text2im",
+          "metadata": {}
+        },
+        "create_time": null,
+        "update_time": null,
+        "content": {
+          "content_type": "text",
+          "parts": [
+            "\nDALL·E displayed 1 images. The images are already plainly visible, so don't repeat the descriptions in detail. Do not list download links as they are available in the ChatGPT UI already. The user may download the images by clicking on them, but do not mention anything about downloading to the user."
+          ]
+        },
+        "status": "finished_successfully",
+        "end_turn": null,
+        "weight": 1.0,
+        "metadata": {
+          "message_type": "next",
+          "model_slug": "gpt-4o",
+          "default_model_slug": "gpt-4o",
+          "pad": "AAAAAAAAAAAAAAA",
+          "parent_id": "ee99443d-9af5-450e-8720-550b7002f64d",
+          "model_switcher_deny": [
+            {
+              "slug": "gpt-4o-mini",
+              "context": "regenerate",
+              "reason": "unsupported_image",
+              "description": "此模型不支持图片。"
+            },
+            {
+              "slug": "gpt-4o-mini",
+              "context": "conversation",
+              "reason": "unsupported_image",
+              "description": "此模型不支持图片。"
+            }
+          ]
+        },
+        "recipient": "all",
+        "channel": null
+      },
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+      "error": null
+    }
+  },
+  {
+    "0f94bc67-fcec-4886-8c7f-4084c25952b4": {
+      "message": {
+        "id": "0f94bc67-fcec-4886-8c7f-4084c25952b4",
+        "author": {
+          "role": "assistant",
+          "name": null,
+          "metadata": {}
+        },
+        "create_time": 1722363588.829103,
+        "update_time": null,
+        "content": {
+          "content_type": "text",
+          "parts": [
+            "这里是您要求的穿着黑色皮衣、手持伞的长发韩国美女的图片。如果有其他需求或需要进一步修改，请告诉我！"
+          ]
+        },
+        "status": "finished_successfully",
+        "end_turn": true,
+        "weight": 1.0,
+        "metadata": {
+          "citations": [],
+          "gizmo_id": null,
+          "finish_details": {
+            "type": "stop",
+            "stop_tokens": [
+              200002
+            ]
+          },
+          "is_complete": true,
+          "message_type": "next",
+          "model_slug": "gpt-4o",
+          "default_model_slug": "gpt-4o",
+          "pad": "AAAAAAAAAAA",
+          "parent_id": "33ae3bad-9473-4123-905f-a5f7fc1c8eda",
+          "model_switcher_deny": [
+            {
+              "slug": "gpt-4o-mini",
+              "context": "regenerate",
+              "reason": "unsupported_image",
+              "description": "此模型不支持图片。"
+            },
+            {
+              "slug": "gpt-4o-mini",
+              "context": "conversation",
+              "reason": "unsupported_image",
+              "description": "此模型不支持图片。"
+            }
+          ]
+        },
+        "recipient": "all",
+        "channel": null
+      },
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf",
+      "error": null
+    }
+  },
+  {
+    "no_message_key75178873e24c4e30aaa38c2dd44c210d": {
+      "type": "conversation_detail_metadata",
+      "banner_info": null,
+      "blocked_features": [],
+      "model_limits": [],
+      "default_model_slug": "gpt-4o",
+      "conversation_id": "aef1bc8f-8cbd-4b84-ad19-5960ab1e7adf"
+    }
+  }
+]
+```
+
+![](https://cdn.professoryin.online/aower-gpt/2024/8/e6d67de4b923e4f6ebbe30d4591c4eb8.png)
+
+![2024-08-05-22-40-18](https://cdn.professoryin.online/aower-gpt/2024/8/03ce62bd7a7cbbc346083cad4fe3ff3c.png)
