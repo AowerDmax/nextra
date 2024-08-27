@@ -49,6 +49,7 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}:latest
+          provenance: false # 禁用provenance生成，防止GHCR的403错误
 
       - name: Post-build cleanup
         run: docker image prune -af
