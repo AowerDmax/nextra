@@ -1,23 +1,26 @@
-# 使用 Node.js 官方基础镜像
+# 使用官方 Node.js 镜像作为基础镜像
 FROM node:18-alpine
-
-# 安装 pnpm
-RUN npm install -g pnpm && pnpm config set registry https://registry.npmmirror.com/
 
 # 设置工作目录
 WORKDIR /app
 
-# 复制构建后的输出文件和必要的配置文件到 Docker 容器
-COPY .next .next
-COPY public public
-COPY .env .env
+# 将 `pnpm` 安装到全局环境
+RUN npm install -g pnpm
+
+# 将项目的 package.json 和 pnpm-lock.yaml 复制到容器中
 COPY package.json pnpm-lock.yaml ./
 
-# 安装仅生产环境所需的依赖
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+# 安装项目依赖
+RUN pnpm install
 
-# 暴露应用运行的端口
+# 复制项目的所有文件到容器中
+COPY . .
+
+# 构建项目（如果有构建步骤）
+RUN pnpm build
+
+# 暴露项目运行的端口（假设你使用的是默认端口 3000）
 EXPOSE 3000
 
 # 启动应用
-CMD ["pnpm", "run", "start"]
+CMD ["pnpm", "start"]
