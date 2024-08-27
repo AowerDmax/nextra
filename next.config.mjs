@@ -16,33 +16,33 @@ const withBundleAnalyzer = NextBundleAnalyzer({
  * CSP headers
  * img-src https to allow loading images from SSO providers
  */
-const cspHeader = `
-  default-src 'self' https: wss:;
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' https:;
-  style-src 'self' 'unsafe-inline' https:;
-  img-src 'self' https: blob: data:;
-  media-src 'self' https: blob: data:;
-  font-src 'self' https:;
-  frame-src 'self' https:;
-  worker-src 'self' blob:;
-  object-src 'none';
-  base-uri 'self';
-  form-action 'self';
-  frame-ancestors 'none';
-  upgrade-insecure-requests;
-  block-all-mixed-content;
-`
+// const cspHeader = `
+//   default-src 'self' https: wss:;
+//   script-src 'self' 'unsafe-eval' 'unsafe-inline' https:;
+//   style-src 'self' 'unsafe-inline' https:;
+//   img-src 'self' https: blob: data:;
+//   media-src 'self' https: blob: data:;
+//   font-src 'self' https:;
+//   frame-src 'self' https:;
+//   worker-src 'self' blob:;
+//   object-src 'none';
+//   base-uri 'self';
+//   form-action 'self';
+//   frame-ancestors 'none';
+//   upgrade-insecure-requests;
+//   block-all-mixed-content;
+// `
 
 const nonPermanentRedirects = [
   // Up to date Redirects:
-  ['/discord', 'https://discord.librechat.ai'],
-  ['/demo', 'https://demo.librechat.cfd'],
-  ['/issue', 'https://github.com/danny-avila/LibreChat/issues/new/choose'],
-  ['/new-issue', 'https://github.com/danny-avila/LibreChat/issues/new/choose'],
-  ['/issues', 'https://github.com/danny-avila/LibreChat/issues'],
-  ['/gh-support', 'https://github.com/danny-avila/LibreChat/discussions/categories/support'],
-  ['/gh-discussions', 'https://github.com/danny-avila/LibreChat/discussions'],
-  ['/roadmap', '/docs/roadmap'],
+  ['/discord', 'https://github.com/AowerDmax/nextra'],
+  ['/demo', 'https://github.com/AowerDmax/nextra'],
+  ['/issue', 'https://github.com/AowerDmax/nextra'],
+  ['/new-issue', 'https://github.com/AowerDmax/nextra'],
+  ['/issues', 'https://github.com/AowerDmax/nextra'],
+  ['/gh-support', 'https://github.com/AowerDmax/nextra'],
+  ['/gh-discussions', 'https://github.com/AowerDmax/nextra'],
+  ['/roadmap', 'https://github.com/AowerDmax/nextra'],
   /* Danny moved these :P */
   ['/docs/configuration/librechat_yaml/ai_endpoints/azure', '/docs/configuration/azure'],
   // Redirect to overview pages
@@ -76,7 +76,7 @@ const nextraConfig = withNextra({
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'static.librechat.ai',
+        hostname: 'cdn.professoryin.online',
         port: '',
         pathname: '/**',
       },
