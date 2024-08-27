@@ -53,7 +53,7 @@ jobs:
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx build \
-            --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            --platform linux/amd64 \
             --tag ghcr.io/$REPO_NAME:latest \
             --tag ghcr.io/$REPO_NAME:${{ github.sha }} \
             --push .
@@ -61,7 +61,7 @@ jobs:
       - name: Post Build Info
         run: |
           echo "🎉 Docker images for $REPO_NAME have been built and pushed successfully!"
-          echo "🖥️  Platforms: linux/amd64, linux/arm64, linux/arm/v7"
+          echo "🖥️  Platforms: linux/amd64"
           echo "📝  Tags:"
           echo "     - ghcr.io/$REPO_OWNER/$REPO_NAME:latest"
           echo "     - ghcr.io/$REPO_OWNER/$REPO_NAME:${{ github.sha }}"
