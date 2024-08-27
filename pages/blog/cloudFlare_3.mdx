@@ -9,6 +9,7 @@ authorid: aower
 ---
 
 import { BlogHeader } from '@/components/blog/BlogHeader'
+import Image from 'next/image'
 
 <BlogHeader />
 
@@ -140,21 +141,21 @@ Free 计划中 WAF的一些基本特点如下：
 
 在上一节我提到Free计划中CF WAF的基础功能，其实对于CF WAF的具体配置来说，还是很简单的，基础规则集是默认生效：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ce03d41df69fc05c5360d93d977cd772.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/ce03d41df69fc05c5360d93d977cd772.png" alt="image.png" width="1600" height="363" />
 
 所以在WAF部分可以配置的也就3项，自定义规则：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/160f65b2b96771732cfe0f80ee81ae81.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/160f65b2b96771732cfe0f80ee81ae81.png" alt="image.png" width="1600" height="363" />
 
   
 速率限制(这部分内容后续我在讲DDOS功能的时候说)：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ae2d1c36da17d0fa2b7cfef8373caacd.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/ae2d1c36da17d0fa2b7cfef8373caacd.png" alt="image.png" width="1600" height="363" />
 
   
 工具：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/0da6be981f600871aa30830e0278d2ef.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/0da6be981f600871aa30830e0278d2ef.png" alt="image.png" width="1600" height="363" />
 
 ## CF WAF自定义规则
 
@@ -164,20 +165,20 @@ Free 计划中 WAF的一些基本特点如下：
 
 自定义规则支持的条件类型非常多：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/413f163dde4b76581dd1ccb2151f1816.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/413f163dde4b76581dd1ccb2151f1816.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/383119dc997451b61ccc723b46b563d4.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/383119dc997451b61ccc723b46b563d4.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/fa04b003d4e6792eb6ceaa5e6517493e.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/fa04b003d4e6792eb6ceaa5e6517493e.png" alt="image.png" width="1600" height="363" />
 
   
 最后还有一个cookie值的字段，我就不单独在浪费一张截图了，而支持的操作如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/2d27bcb0d5f5bcf36b1963e3f7150f6f.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/2d27bcb0d5f5bcf36b1963e3f7150f6f.png" alt="image.png" width="1600" height="363" />
 
 ### 自定义规则支持的操作
 
@@ -326,7 +327,7 @@ JS 质询：
 
 这应该是个人博主都需要的，在允许包括主流搜索引擎在内的自动化程序收录网站的同时，拦截掉其他恶意的爬虫，通过"and"可以添加限定条件，如下图：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/aedbee6082e2fac27d20fb7859b4b79f.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/aedbee6082e2fac27d20fb7859b4b79f.png" alt="image.png" width="1600" height="363" />
 
 上图中，如果不加"and"就是对托管二级域名下的所有子域名都生效；通过添加"and"可以限定只允许认证的自动化程序(搜索引擎爬虫等)对主机名"blog.tangwudi.com"对应的网站进行访问。
 
@@ -336,13 +337,13 @@ JS 质询：
 
 注2：已知自动化程序包含很多类别，如有需要是可以针对这些类别进行精细化控制的，这主要是通过"已通过验证自动程序类别"字段来控制。例如，您可以单独阻止人工智能 (AI) 机器人、爬虫在未经您允许的情况下爬取你的网站内容并训练大型语言模型 (LLM) 然后重新生成内容，这条规则需要位于"允许已知自动程序"的规则之前，具体配置如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/3c00804160f282da39d5f5dbc297c57a.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/3c00804160f282da39d5f5dbc297c57a.png" alt="image.png" width="1600" height="363" />
 
 #### 对异常流量(主要是恶意爬虫)进行托管质询
 
 规则配置如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5739edb0ecb075c48a4f2e613e31f262.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/5739edb0ecb075c48a4f2e613e31f262.png" alt="image.png" width="1600" height="363" />
 
 这条规则结合前面允许"已知自动程序"的规则，其实就实现了对非CF认证的自动程序(包括恶意爬虫)开启著名的CF"5秒盾"，当然，也有破CF"5秒盾"的方法，不过，起码提高了恶意爬虫的爬取门槛，能拦下绝大部分恶意爬虫就算成功。
 
@@ -350,11 +351,11 @@ JS 质询：
 
 为啥有这个需求？其实CF是可以识别并放行非恶意自动化程序，不过这需要花钱升级pro：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/0623e1d4a6fdcbec13151ae711fe2e42.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/0623e1d4a6fdcbec13151ae711fe2e42.png" alt="image.png" width="1600" height="363" />
 
 对于Free计划的用户而言，就只能手动放行对特定URI路径的访问，例如，博客有RSS功能，就需要开放各种RSS相关自动化程序对博客RSS的周期性访问：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/04fff723a0929a749aa31640499fc87c.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/04fff723a0929a749aa31640499fc87c.png" alt="image.png" width="1600" height="363" />
 
   
 API接口访问也是一样的处理方式。
@@ -363,7 +364,7 @@ API接口访问也是一样的处理方式。
 
 这种主要是针对UA(UserAgent)的判定，如果一些自动化程序有自己特定的UA关键字，就可以使用该方式，比如，通过UA控制允许google机器人访问，当然，也可以通过"and"添加其他限制条件，例如谷歌的ASN号：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/83a9e11cffc1a963e103f6e96ad39b18.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/83a9e11cffc1a963e103f6e96ad39b18.png" alt="image.png" width="1600" height="363" />
 
 注1：上图只是以谷歌机器人举例，实际要允许谷歌机器人访问只需要前面讲到的允许"已知自动程序"访问即可。
 
@@ -375,7 +376,7 @@ API接口访问也是一样的处理方式。
 
 以我的博客地址为例，假如我只允许google和bing搜索引擎以及友站"abc.example.com"友链过来的访问，而禁止其他任何站点的链接，那么规则如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/626ea5c8cb0971c32da905d5c04a002c.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/626ea5c8cb0971c32da905d5c04a002c.png" alt="image.png" width="1600" height="363" />
 
 #### 自定义规则部分总结
 
@@ -385,7 +386,7 @@ API接口访问也是一样的处理方式。
 
 另外，要配置CF WAF的自定义规则，需要配置人员对字段中的各种概念有一定程度的了解，比如ASN、引用方(referer)、用户代理(UserAgent)的含义和实际流量中对应的内容，比如，openai机器人的UA内容是这样：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5a7f0cc65c80e4b53da4e016812e8e22.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/5a7f0cc65c80e4b53da4e016812e8e22.png" alt="image.png" width="1600" height="363" />
 
   
 需要先知道其UA是这个内容，才能够知道如何利用自定义规则的用户代理字段去匹配，否则，你想要配置规则都会不知道如何下手～。
@@ -394,12 +395,12 @@ API接口访问也是一样的处理方式。
 
 其实，IP访问规则不应该在WAF部分来写，因为在流量序列中，IP访问规则是位于WAF功能之前的：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/95f2f6d25fd35d6aa48577050fecadfa.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/95f2f6d25fd35d6aa48577050fecadfa.png" alt="image.png" width="1600" height="363" />
 
   
 不过该功能很简单，且在CF控制台中，也是位于WAF部分：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/95f7cc4c48ab0c0bf2536c34eaa4611c.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/95f7cc4c48ab0c0bf2536c34eaa4611c.png" alt="image.png" width="1600" height="363" />
 
 所以干脆在这里一起写了，另外还有一个"用户代理阻止"的功能，也打包一起说了。
 
@@ -409,7 +410,7 @@ API接口访问也是一样的处理方式。
 
 比如我想要允许某个IP范围(假设为192.168.100.0/24)访问我的网站，同时禁止谷歌(**AS15169**)和微软(**AS8075**)的IP来访问我的网站，则设置如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5538b0212cb409c2a0a797d0dda69dfb.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/5538b0212cb409c2a0a797d0dda69dfb.png" alt="image.png" width="1600" height="363" />
 
   
 所以，虽然使用自定义规则也可以实现这个功能，不过如果目标明确(通过IP或者ASN就能够直接锁定的)，使用IP访问规则比使用自定义规则更方便快捷。
@@ -418,7 +419,7 @@ API接口访问也是一样的处理方式。
 
 CF的 WAF提供了两种主要的方法来阻止特定的用户代理(UserAgent)：通过前面讲过的自定义规则以及工具部分的用户代理阻止：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/326997b0145cd056bd28b88ae51cf028.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/326997b0145cd056bd28b88ae51cf028.png" alt="image.png" width="1600" height="363" />
 
 尽管这两者看似有重叠，但它们有不同的用途和灵活性：
 

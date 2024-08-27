@@ -9,6 +9,7 @@ authorid: aower
 ---
 
 import { BlogHeader } from '@/components/blog/BlogHeader'
+import Image from 'next/image'
 
 <BlogHeader />
 
@@ -96,13 +97,13 @@ Cache Rules的主要功能和特点如下：
     • 让CF不要缓存源服务器对满足请求传入匹配的访问请求的响应内容，通常用在访问请求对动态内容或者需要登录访问的内容的访问。  
     • 唯一的可选项只有浏览器TTL  
     
-    ![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/757e4a76e940d2bb59a932fac3f7d90d.png)
+    <Image src="https://cdn.professoryin.online/aower-gpt/2024/8/757e4a76e940d2bb59a932fac3f7d90d.png" alt="image.png" width="1600" height="363" />
     
 2. **符合缓存条件**  
     • 让CF缓存源服务器对满足请求传入匹配的访问请求的响应内容，通常用在访问请求对静态内容的访问。  
     • 有6个可选项，其中，以边缘TTL和浏览器TTL最常用，本文中就以这2个选项为例进行演示：  
     
-    ![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/4b63842107680ade8fe6bd19b41d4e62.png)
+    <Image src="https://cdn.professoryin.online/aower-gpt/2024/8/4b63842107680ade8fe6bd19b41d4e62.png" alt="image.png" width="1600" height="363" />
     
 
 注：边缘TTL指静态内容在CF边缘缓存中的存在时间，浏览器TTL指静态内容在浏览器本地的缓存中的存在时间，一般来说，为了页面内容显示的一致性，浏览器TTL的时间应该小于边缘TTL。
@@ -113,7 +114,7 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 1、规则序号越小优先级越高，所以需要梳理好缓存规则的逻辑顺序，将优先级高的排在前面，一般是需要绕过缓存的在前，如下图：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e117f87426957ef45001b13523e8879c.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/e117f87426957ef45001b13523e8879c.png" alt="image.png" width="1600" height="363" />
 
   
 2、动态网站的非动态内容部分也可以缓存，不过需要在优先级较高的绕过缓存部分的规则中先排除掉动态内容部分。  
@@ -127,32 +128,32 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 以我群站导航页网址`www.tangwudi.com`为例，假设采用的图床网址为`image.tangwudi.com`，采用的API路径为`www.tangwudi.com/api*`，按照前面说的缓存规则的配置逻辑，应该如下设置：  
 1、API属于动态内容，需要绕过缓存  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/3ebbb63c1725c85035de4ab21e562826.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/3ebbb63c1725c85035de4ab21e562826.png" alt="image.png" width="1600" height="363" />
 
   
 2、对于图床的图片进行缓存  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5580f031e0e40b1ea390e246afef0a6a.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/5580f031e0e40b1ea390e246afef0a6a.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/9fa752644adf5630b2d6acfb2700f9c2.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/9fa752644adf5630b2d6acfb2700f9c2.png" alt="image.png" width="1600" height="363" />
 
   
 注：边缘TTL和浏览器TTL为可选项，默认不设置均为2小时。对于图片之类的静态内容，是否设置TTL或者设置多长时间需要看网站的类型而定，主要是看图片更新的频率。对于我的群站导航首页而言，图片基本不会动，所以完全可以有多长设置多长，比如边缘TTL直接设置1年也没毛病，至于浏览器TTL，理论上设置1年也可以，但是没必要，保险起见1个月就差不多了，静态个人博客类型的网站也是一样的道理。  
 3、其他静态内容的缓存(主要是HTML)  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/69e85d7da5f4dd719f8921ac6a5fa690.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/69e85d7da5f4dd719f8921ac6a5fa690.png" alt="image.png" width="1600" height="363" />
 
   
 边缘TTL和浏览器TTL和图片缓存一样：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/bf0b62f6c17aa721c6e2d9dfaeea4600.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/bf0b62f6c17aa721c6e2d9dfaeea4600.png" alt="image.png" width="1600" height="363" />
 
   
 最终完成效果：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/baedb886ef6d768fa9b9cf6aae4e825d.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/baedb886ef6d768fa9b9cf6aae4e825d.png" alt="image.png" width="1600" height="363" />
 
 ---
 
@@ -169,7 +170,7 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 注意规则的运算符，URI路径的的运算符我这里均为"包含"(这个是为了偷懒，当然也可以选择运算符"开头为"，那么后面就要按格式写，比如"开头为"后面是"/wp-admin")：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/19ba7fcc936b93c6d5420ae0903cfa2b.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/19ba7fcc936b93c6d5420ae0903cfa2b.png" alt="image.png" width="1600" height="363" />
 
 表达式为：
 
@@ -181,7 +182,7 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 注意每条规则中"Cookie"的运算符均为包含：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/eac4515aecef12f29e3d5be8ff76a2a1.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/eac4515aecef12f29e3d5be8ff76a2a1.png" alt="image.png" width="1600" height="363" />
 
 表达式为：
 
@@ -191,21 +192,21 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 3、绕过以.php结尾的页面  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/52f44f6b7a85a9913375fa9c9d64d9cb.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/52f44f6b7a85a9913375fa9c9d64d9cb.png" alt="image.png" width="1600" height="363" />
 
   
 注：其实上面2条规则已经可以足以涵盖动态内容了，这条只能算是打个补丁。
 
 4、缓存图片内容  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/94c4759b038a020b1e0ecf63d4c452b8.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/94c4759b038a020b1e0ecf63d4c452b8.png" alt="image.png" width="1600" height="363" />
 
   
 注：这部分的边缘TTL以及浏览器TTL的设置参考文章前面部分描述。
 
 5、缓存HTML  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/010509c6551aa68156be82550d815dd2.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/010509c6551aa68156be82550d815dd2.png" alt="image.png" width="1600" height="363" />
 
 表达式：
 
@@ -217,7 +218,7 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 6、缓存其他内容  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/661da3ca89f1e5b8d3b003554c20be66.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/661da3ca89f1e5b8d3b003554c20be66.png" alt="image.png" width="1600" height="363" />
 
   
 这里主要是针对除了HTML以外的其他内容，比如css文件等。
@@ -226,7 +227,7 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 最终配置如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/301bbc3fba46369bc4f35b1ad27a7097.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/301bbc3fba46369bc4f35b1ad27a7097.png" alt="image.png" width="1600" height="363" />
 
 注1：其实第4,5,6条规则粗旷点可以只保留第6条，4,5都可以直接删除，效果是一样的，但是之所以分开还是为了降低风险以及让边缘TTL及浏览器TTL可以根据不同类型的缓存设置各自适合的值。
 
@@ -242,34 +243,34 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 另：除了Cache Rules以外，还有另一个能设置CF缓存行为的功能项就是"页面规则"，且页面规则在流量序列中的处理优先级是高于Cache Rules的：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/4a3c4faf7424aff241ca8861fc68fecd.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/4a3c4faf7424aff241ca8861fc68fecd.png" alt="image.png" width="1600" height="363" />
 
 不过，一般不建议使用"页面规则"来进行缓存，有以下几点原因：
 
 1、页面规则只有3条额度(Free计划)，太少了，而且页面规则除了缓存功能以外，还可以实现很多其他的功能，如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b7497f129d57a047e3d7144aab74b5ce.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/b7497f129d57a047e3d7144aab74b5ce.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/9cb757d2804c8b67db9b693c99e29ed5.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/9cb757d2804c8b67db9b693c99e29ed5.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b46677e2a4e75a33b2b49d5ecf82b3f6.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/b46677e2a4e75a33b2b49d5ecf82b3f6.png" alt="image.png" width="1600" height="363" />
 
 所以页面规则应该用来实现更加复杂的复合型需求，或者某些需要更高优先级处理的特殊流量的临时处理上，仅仅用来实现Cache Rules都能完成的功能就太浪费了(毕竟Cache Rules有10条的额度，比页面规则的3条宽松多了～)。
 
 2、页面规则的匹配条件只能用URL，太简陋了：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/702045845fce9857624dd1c89e214fb7.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/702045845fce9857624dd1c89e214fb7.png" alt="image.png" width="1600" height="363" />
 
   
 不像Cache Rules的"请求传入匹配"支持多种条件以及or和and的组合。
 
 3、边缘TTL最长只能一个月，Cache Rules可以设置为1年：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/a09268c0805561b4c3a7296c868d3c39.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/a09268c0805561b4c3a7296c868d3c39.png" alt="image.png" width="1600" height="363" />
 
 4、其实还有个原因就是不清除CF未来的态度，因为6月左右的时候，页面规则其实已经公告被废除，不过不知道后来怎么又收回了废除的通知，搞不清除以后会咋样，所以能不用就不用吧，就算要用也尽量用在临时性处理上，平时尽量使用流量序列上已有的节点功能来完成吧，这个最保险。
 
@@ -281,23 +282,23 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 ## 清除缓存
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/19de663d2324c6c385ba46520db0b866.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/19de663d2324c6c385ba46520db0b866.png" alt="image.png" width="1600" height="363" />
 
   
 清除缓存文件用来强制CF从您的 Web 服务器中提取这些文件的最新版本。
 
 可以选择"自定义清除"以清除特定的URL(Free计划只能清除完整匹配URL的资源，不支持`*`通配符)：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/aa240c843d77b46643fbb5ca4e441b21.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/aa240c843d77b46643fbb5ca4e441b21.png" alt="image.png" width="1600" height="363" />
 
   
 也可以选择"清除所有内容"：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5f05f925fc12c98abb48875780492d86.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/5f05f925fc12c98abb48875780492d86.png" alt="image.png" width="1600" height="363" />
 
 ## 缓存级别
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/2b516a41cd5d6c4546bf7da9f07c8680.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/2b516a41cd5d6c4546bf7da9f07c8680.png" alt="image.png" width="1600" height="363" />
 
   
 缓存级别决定CF应缓存多少网站的静态内容，CF的 CDN 根据以下级别缓存静态内容：
@@ -313,13 +314,13 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 ## 浏览器TTL
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e4246fb5dc6337c689fa9d3ddae6307f.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/e4246fb5dc6337c689fa9d3ddae6307f.png" alt="image.png" width="1600" height="363" />
 
 这个其实就是默认的浏览器TTL值，如果访问请求没有匹配缓存相关规则中设置的浏览器TTL值，或者源服务器设置的浏览器TTL值小于该值，就会使用此处的值，这个大家根据自己的需要设置即可。
 
 ## Crawler Hints(爬虫提示)
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/661a73ab6e60e16fed669d0beeb51907.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/661a73ab6e60e16fed669d0beeb51907.png" alt="image.png" width="1600" height="363" />
 
 仔细研究了一下，发现这个功能比较有意思：当托管在CF上的网站内容发生变化的时候，该功能会记录这些变化，然后向搜索引擎和其他合法爬虫程序提供有关内容变化频率和重要性的提示，帮助爬虫程序更智能地安排抓取计划，优先抓取变化频繁或重要的内容，确保搜索引擎索引的信息是最新的，也因为爬取效率提高，减少了对源站不必要的抓取，间接降低了源站服务器的负载。
 
@@ -329,7 +330,7 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 ## Always Online™
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/70a6fae5732c12e06d77fb17e22b3d4d.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/70a6fae5732c12e06d77fb17e22b3d4d.png" alt="image.png" width="1600" height="363" />
 
 简单来说，就是当源站出现故障的时候，如果用户访问链接页面的内容在缓存中，CF就会直接把这个内容返回给用户，并且在页面顶部显示一条信息提示：源站出问题了，这个只是缓存内容。
 
@@ -339,13 +340,13 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 ## 开发模式
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/a765c32b655d83fd18ed98ebbfd925e9.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/a765c32b655d83fd18ed98ebbfd925e9.png" alt="image.png" width="1600" height="363" />
 
 该模式开启后，所有请求都绕过CF的缓存，直接传递到源服务器。此功能在需要即时查看所做更改时非常有用。启用后，如果未手动关闭，开发模式将持续三个小时，然后自动关闭。
 
 ## Tiered Cache
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/9d213611d77b2174a5803f005485e5ac.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/9d213611d77b2174a5803f005485e5ac.png" alt="image.png" width="1600" height="363" />
 
 简单来说，如果不启用该功能，那么CF全球任何一个数据中心都可以直接向源服务器发起回源请求，哪怕这个数据中心离源服务器很远。
 
@@ -361,23 +362,23 @@ Free计划中，Cache Rules有10条的额度，足够一般人使用了，不过
 
 打开chrome浏览器(或者edge)，按"F12"进入开发者工具，点击"网络"选项卡，类型选择"全部"：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/2da91077216ebe750425ef62d04984af.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/2da91077216ebe750425ef62d04984af.png" alt="image.png" width="1600" height="363" />
 
   
 在浏览器地址栏输入`www.tangwudi.com`并回车，然后在"重新加载"按钮上点右键并选择"清空缓存并硬性重新加载"：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/f9c5773530dd93448f112955b1ed7963.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/f9c5773530dd93448f112955b1ed7963.png" alt="image.png" width="1600" height="363" />
 
   
 在左边名称处选择`www.tangwudi.com`，在右边"标头"部分的"响应标头"的"cf-cache-status"可以查看缓存是否成功：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/d905ae29feafb5567587730edc2d8d44.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/d905ae29feafb5567587730edc2d8d44.png" alt="image.png" width="1600" height="363" />
 
 ## 动态站点的验证
 
 以我的临时测试站点`blog.tangwudi.xyz`为例：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/2940f7e049f7b61f4abfdc06cf1a0b0b.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/2940f7e049f7b61f4abfdc06cf1a0b0b.png" alt="image.png" width="1600" height="363" />
 
 注1：一般情况下，如果使用Cache Rules(或者页面规则)控制CDN完成缓存，cf-cache-status通常有3种结果：HIT(完全缓存)、DYNAMIC(部分缓存，一般是没有配置专门的Cache Rules而只是触发了CF默认的缓存规则，或者是动态网站登录后因为cookie里的关键字匹配了"绕过缓存"的策略，所以只是缓存了一部分)、BYPASS(绕过，说明有缓存规则设置绕过了该地址的缓存)。
 

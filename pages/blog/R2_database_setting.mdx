@@ -9,6 +9,8 @@ authorid: aower
 ---
 
 import { BlogHeader } from '@/components/blog/BlogHeader'
+import Image from 'next/image'
+
 
 <BlogHeader />
 
@@ -24,7 +26,7 @@ import { BlogHeader } from '@/components/blog/BlogHeader'
 
 其实在以前的文章中，我在对比网上已有的同步方案时就提到过rclone(参见：[docker系列 使用docker基于syncthing实现多点文件夹同步之详细教程](https://blog.tangwudi.com/technology/docker11939/))，也简要介绍过其优势：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e8e8e87423c9703f5643ec7576f7f409.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/e8e8e87423c9703f5643ec7576f7f409.png" alt="image.png" width="1600" height="363" />
 
 不过那时在"文件夹数据同步"这个明确场景中syncthing更符合我的需求。而现在，在面对"将本地chevereto图片文件夹里的图片同步到cloudflare R2中"这个场景时，rclone就是最佳选择了。
 
@@ -32,7 +34,7 @@ import { BlogHeader } from '@/components/blog/BlogHeader'
 
 其实在这种图床方案的迁移中，一个很关键的问题是图片地址的兼容性。举例说明：前面那张图片的真实地址为`https://cdn.professoryin.online/aower-gpt/2024/8/e8e8e87423c9703f5643ec7576f7f409.png`，其相对路径地址为：`images/2024/05/21/202405211354063.png`,而chevereto里面图片的存储路径刚好是这样：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c5286ea95f6b9efedcdfd60d5aa35d7a.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/c5286ea95f6b9efedcdfd60d5aa35d7a.png" alt="image.png" width="1600" height="363" />
 
   
 所以chevereto图床的存放还是很讲规矩的，那么，在迁移图床的时候，如果迁移目的地最终也能实现图片相同地址的输出，那么迁移就算是成功了，COS类型的方案刚好可以实现这一点，只将chevereto图床里images整个目录全部复制到R2的桶下即可。
@@ -45,27 +47,27 @@ import { BlogHeader } from '@/components/blog/BlogHeader'
 
 由于后面在配置rclone的时候，需要使用到R2的Accesskey和SecretKey，所以需要先创建R2存储桶(需要先开通R2，要用到信用卡绑定，这一步并不会产生费用)。
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b56bbaf5024b16e6097c9957ee16a1c1.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/b56bbaf5024b16e6097c9957ee16a1c1.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/66127f06010d45383bc4a408abc4e2eb.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/66127f06010d45383bc4a408abc4e2eb.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ae662188b97931e6452261b8cc327ae2.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/ae662188b97931e6452261b8cc327ae2.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e846e7565c607cda4eb4cd77156623a8.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/e846e7565c607cda4eb4cd77156623a8.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/3d5b97990da7e6f141097c6e0aefa178.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/3d5b97990da7e6f141097c6e0aefa178.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/060b83836133dc298f8d8daaaf4d02cd.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/060b83836133dc298f8d8daaaf4d02cd.png" alt="image.png" width="1600" height="363" />
 
 ### 安装rclone
 
@@ -77,7 +79,7 @@ brew install rclone
 
 也可以直接在rclone官网下载适合自己的包，官网链接如下：[](https://rclone.org/downloads/)[https://rclone.org/downloads/](https://rclone.org/downloads/)：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/f4b4d0b0337dd9121017aaa8408f313c.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/f4b4d0b0337dd9121017aaa8408f313c.png" alt="image.png" width="1600" height="363" />
 
   
 注：采用直接下载的方式，解压缩后直接运行rclone执行文件即可。
@@ -108,57 +110,57 @@ source ~/.bash_profile
 rclone config
 ```
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/f800321c7f5d2a3b1e03b36e03dc1f45.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/f800321c7f5d2a3b1e03b36e03dc1f45.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/221d67d87ada6b5bad28664c31030ca1.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/221d67d87ada6b5bad28664c31030ca1.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ec1a9c66515a239a55dcf23a84afad87.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/ec1a9c66515a239a55dcf23a84afad87.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/0e43e4e80c28a95cfd99958d95f2ab13.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/0e43e4e80c28a95cfd99958d95f2ab13.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/37fc9ae54a8e9a19b1d8b1c4d6e2a2ed.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/37fc9ae54a8e9a19b1d8b1c4d6e2a2ed.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c7c362aac39ecf6de664905af204e4e7.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/c7c362aac39ecf6de664905af204e4e7.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/4f9452f7645ea4660872f6ac28513185.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/4f9452f7645ea4660872f6ac28513185.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b3dbbb76280ed033583a7d93d48ce174.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/b3dbbb76280ed033583a7d93d48ce174.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/2287701c570a8231721bcd51218285a2.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/2287701c570a8231721bcd51218285a2.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/688968ae5fce93a47aab98852135a089.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/688968ae5fce93a47aab98852135a089.png" alt="image.png" width="1600" height="363" />
 
   
 注：选择y的话会进入高级选项，几十个，其实只有第一个是需要设置的，将存储桶的acl改为public-read：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/a0f437343cc35fa5105cfda6d43668a1.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/a0f437343cc35fa5105cfda6d43668a1.png" alt="image.png" width="1600" height="363" />
 
   
 其他选项一路回车使用默认值即可。最终配置如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e76b60e8641ab45192af9903017a8310.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/e76b60e8641ab45192af9903017a8310.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c7cf392ad2e51907eb5031819293b3c9.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/c7cf392ad2e51907eb5031819293b3c9.png" alt="image.png" width="1600" height="363" />
 
   
 其实上述`rclone config`的所有操作目的是生成"rclone.conf"的配置文件，所以我们其实也可以直接新建一个配置文件然后直接编辑其内容，macos里rclone的配置文件路径为：
@@ -167,7 +169,7 @@ rclone config
 /Users/your-username/.config/rclone/rclone.conf
 ```
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/baac9f7d10d7e4d8bd2ad8d73074e675.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/baac9f7d10d7e4d8bd2ad8d73074e675.png" alt="image.png" width="1600" height="363" />
 
   
 我直接把配置文件内容贴出来，大家可以直接使用：
@@ -184,7 +186,7 @@ rclone config
 rclone tree images-bed:images-bed #根据自己实际设置进行修改
 ```
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/baa54c79ae879f7cd4b9fd9d4049f0eb.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/baa54c79ae879f7cd4b9fd9d4049f0eb.png" alt="image.png" width="1600" height="363" />
 
   
 2、使用`rclone copy`命令将本地chevereto图床的图片上传到R2上的images-bed桶：
@@ -196,56 +198,56 @@ rclone copy -P -v /Volumes/data/docker/chevereto/data/images images-bed:images-b
 注：上面命令的`-P`参数是以500毫秒为单位显示传输进度(默认一分钟)，`-v`参数后面跟的是我的chevereto里images目录的实际路径，最后的`images-bed:images-bed/images`是指前面定义的R2远程存储(images-bed):上创建的桶(images-bed)上的images目录，通过这种格式，就可以实现我们前面提到的输出路径一致的效果。  
 等上传完成：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/47b66ea50433473d34b1c697548cd717.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/47b66ea50433473d34b1c697548cd717.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/73d1c6a3c5053695e75a0144b78343a0.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/73d1c6a3c5053695e75a0144b78343a0.png" alt="image.png" width="1600" height="363" />
 
   
 3、再次使用`rclone tree` 命令进行确认：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ffd4248d5881fd38551e0c49c40457eb.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/ffd4248d5881fd38551e0c49c40457eb.png" alt="image.png" width="1600" height="363" />
 
 # cloudflare R2上配置自定义域
 
 图片完成上传后，默认R2上的"images-bed"桶是无法访问的，如下图：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/8dba314f4be05494b132bb28130e42d5.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/8dba314f4be05494b132bb28130e42d5.png" alt="image.png" width="1600" height="363" />
 
   
 这时需要给R2上的"images-bed"桶配置自定义域：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/814b388ec221749470e133f9d083fd57.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/814b388ec221749470e133f9d083fd57.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/a94c00678f899b8f04ba99ef630adffa.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/a94c00678f899b8f04ba99ef630adffa.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c47dc22e43f0faa95b6c70c6c2380541.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/c47dc22e43f0faa95b6c70c6c2380541.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/87faeded2eccb80d19b5167e30d2f445.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/87faeded2eccb80d19b5167e30d2f445.png" alt="image.png" width="1600" height="363" />
 
   
 已经生效了，我们用试验来证明，把任意一张图片使用原本的链接打开：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/1c57b56542b6530493203665daa4f6b8.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/1c57b56542b6530493203665daa4f6b8.png" alt="image.png" width="1600" height="363" />
 
   
 把上图红框中的原本的域名换成`r2image.tangwudi.com`然后重新回车打开：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/3cdf5072af65a00f919df20fa871317d.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/3cdf5072af65a00f919df20fa871317d.png" alt="image.png" width="1600" height="363" />
 
   
 成功。如果要用R2完全替代我的chevereto图床，只需要删除原有的`image.tangwudi.com`的解析，然后把R2上images-bed的自定义域改为`image.tangwudi.com`即可。
 
 另：rclone还有其他很多功能，包括把远程存储挂载到本地等，我就不一一介绍了，主要是我自己也没啥需求，大家有兴趣可以自行研究一下，网上也有很多相关教程。  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5280496eafcc9bfd0d503c9cb701eedf.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/5280496eafcc9bfd0d503c9cb701eedf.png" alt="image.png" width="1600" height="363" />
 
 # 后话
 

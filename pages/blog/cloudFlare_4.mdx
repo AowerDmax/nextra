@@ -9,6 +9,7 @@ authorid: aower
 ---
 
 import { BlogHeader } from '@/components/blog/BlogHeader'
+import Image from 'next/image'
 
 <BlogHeader />
 # 前言
@@ -79,17 +80,17 @@ DDoS(Distributed Denial of Service，分布式拒绝服务)攻击是一种通过
 
 总攻击流量2.13T，峰值带宽541.75G：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/03529f4a4ca7f408735c1531344f436f.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/03529f4a4ca7f408735c1531344f436f.png" alt="image.png" width="1600" height="363" />
 
   
 总请求总数6.51亿，峰值RPS(每秒请求数)1.71亿：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/68d2f3f111ce5563980fc2c97484926a.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/68d2f3f111ce5563980fc2c97484926a.png" alt="image.png" width="1600" height="363" />
 
   
 攻击来源于多个国家：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c9fd453d2993fdb7567026672d8359e9.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/c9fd453d2993fdb7567026672d8359e9.png" alt="image.png" width="1600" height="363" />
 
   
 就问这种规模的攻击有多少传统的以"点"方式部署的架构能扛住？
@@ -125,33 +126,33 @@ DDoS(Distributed Denial of Service，分布式拒绝服务)攻击是一种通过
 其实前面虽然讲了那么多基础知识来铺垫，但是实际上，CF 的DDoS相关的配置却很简单，大家依据以下步骤即可完成基础防护，当然，前提是已经将域名托管到CF上并且已经选择了合适的方式完成了建站(建站方式的选择可以参见文章：)。  
 配置网站安全级别：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/d84017a57309aa4afd25bc8d88188449.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/d84017a57309aa4afd25bc8d88188449.png" alt="image.png" width="1600" height="363" />
 
 ---
 
 注：安全级别中有一个特殊的选项叫`I'm Under Attack!`  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/809063bb365a7ce6f3bb91930b4861f1.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/809063bb365a7ce6f3bb91930b4861f1.png" alt="image.png" width="1600" height="363" />
 
   
 当网站受到攻击且严重影响正常访问时，可以将安全级别设置为该模式。这样设置以后，会对所有访问网站的请求(包括正常访问和攻击流量)开启JS质询，只有通过JS质询的请求才会被允许访问网站内容，这样虽然会影响正常用户访问网站的体验，但是却能保证拦截掉绝大部分的异常访问，是在网站受到攻击时的最后手段之一。
 
 该模式也可以在CF的概述页面快速开启：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/170baae3774e8be9597e7d8e49196ffc.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/170baae3774e8be9597e7d8e49196ffc.png" alt="image.png" width="1600" height="363" />
 
   
 如果网站是使用wordpres建站，也可以直接在cloudflare插件里开启而不用登录cloudflare网站：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/4d5459a6cd20b6b358481e40c4f695fb.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/4d5459a6cd20b6b358481e40c4f695fb.png" alt="image.png" width="1600" height="363" />
 
 部署DDoS替代：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/c97e1d8bdf312ece82700f11d22a2dff.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/c97e1d8bdf312ece82700f11d22a2dff.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/8a66b8b8df41f41ae1111a73a044c14a.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/8a66b8b8df41f41ae1111a73a044c14a.png" alt="image.png" width="1600" height="363" />
 
 ---
 
@@ -159,22 +160,22 @@ DDoS(Distributed Denial of Service，分布式拒绝服务)攻击是一种通过
 
 阻止的攻击可以在"安全性"-"事件"中进行查看，日志格式如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/8e7824194d91ca40c36e3edfdad22801.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/8e7824194d91ca40c36e3edfdad22801.png" alt="image.png" width="1600" height="363" />
 
 ---
 
 自动程序：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b15e3a177f19fe23fcfdc1ed5ab3d3f7.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/b15e3a177f19fe23fcfdc1ed5ab3d3f7.png" alt="image.png" width="1600" height="363" />
 
   
 速率限制：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/9d37588cb4d0339fb1434a6d59781f2b.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/9d37588cb4d0339fb1434a6d59781f2b.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/fb505c41c3578774713b3763a6e7f4ef.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/fb505c41c3578774713b3763a6e7f4ef.png" alt="image.png" width="1600" height="363" />
 
 完成以上配置之后，对于"一般"规模的DDoS攻击，已经可以忽略不计了，再结合WAF的正确配置(参见文章：[家庭数据中心系列 cloudflare教程(四) CF WAF功能及详细配置教程](https://blog.tangwudi.com/technology/homedatacenter12336/))，对于个人站长而言，安全性方面已经不是需要担心的问题了。
 
@@ -206,7 +207,7 @@ CF的DDoS防护相对于其他竞争对手的最大优势包括以下几个方�
 
 注：随手发一个google上搜DDoS防护价格搜出来的"高防CDN"的价格：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/7921b33111d8afa5f7cd7926efca9156.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/7921b33111d8afa5f7cd7926efca9156.png" alt="image.png" width="1600" height="363" />
 
   
 按这个收费标准，我遭受的2.13T流量要防住需要给多少钱？？瞬间感觉自己赚了好几万有没有！

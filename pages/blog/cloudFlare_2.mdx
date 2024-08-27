@@ -9,6 +9,7 @@ authorid: aower
 ---
 
 import { BlogHeader } from '@/components/blog/BlogHeader'
+import Image from 'next/image'
 
 <BlogHeader />
 
@@ -62,11 +63,11 @@ CF边缘网络的简要描述如下：
 
 当域名托管在CF上以后(托管域名到CF上的配置步骤可以参见：[家庭数据中心系列 通过国内备案云主机白嫖cloudflare实现国外快速访问国内](https://blog.tangwudi.com/technology/skill3911/))，新建一个主机名默认的代理状态是"已代理"，也就是通常所说的"小橙云"状态：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/0930a113f6568e9636cd7819fb0135c2.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/0930a113f6568e9636cd7819fb0135c2.png" alt="image.png" width="1600" height="363" />
 
 在这种状态下，用户使用DNS解析对应主机名时(例如上图中的abc.tangwudi.com)，虽然我设置的解析地址是110.110.110.110，但是用户实际解析的结果却是如下：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/97e8f1cc5c4f6bbcd3bc50cce71d3492.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/97e8f1cc5c4f6bbcd3bc50cce71d3492.png" alt="image.png" width="1600" height="363" />
 
   
 上图中104.21.76.18和172.67.185.18，就是CF边缘网络的入口IP地址，我前面提到的负优化，也是指的直接使用这个地方进行访问的效果。
@@ -81,17 +82,17 @@ CF的优选 IP(Preferred IP)功能主要用于优化网络性能。
 
 不过，现在也有间接的方式享受优选IP功能，就是CF的"自定义主机名"功能+国内域名供应商的解析功能+特定软件探测出的优选IP：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/211bdfa3aa9a95f04f52fc9b6ec88ec2.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/211bdfa3aa9a95f04f52fc9b6ec88ec2.png" alt="image.png" width="1600" height="363" />
 
   
 然后通过软件选出成功率最高，延迟最小的节点：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/bd7d5da14962c97ff4af3ef88a491603.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/bd7d5da14962c97ff4af3ef88a491603.png" alt="image.png" width="1600" height="363" />
 
   
 将合适的节点IP(上图中第一个IP)，在国内域名供应商的控制台中配置到需要优选IP的主机名对应的记录值里即可：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/6df9a8cd891f43d2ecf16eec6e466e78.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/6df9a8cd891f43d2ecf16eec6e466e78.png" alt="image.png" width="1600" height="363" />
 
 注：使用自定义主机名的方式来实现优选IP的教程网上有很多，大家感兴趣可以自己去搜索一下，后续如果有必要，我也会考虑专门用一片文章的篇幅来介绍详细的配置步骤，主要是我现在已经不用这个方案了(去年还是使用备案域名的时候用过)，所以暂时没啥动力写这个教程(关键也不是几句话能说清的～)。
 
@@ -196,7 +197,7 @@ WARP 功能的简要介绍如下：
 
 当然，站长们也可以根据自己的需要，设置访问者、CF边缘网络、CF边缘服务器和源站之间的通信方式：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/f344561ef887879857a7f6625bc97c6f.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/f344561ef887879857a7f6625bc97c6f.png" alt="image.png" width="1600" height="363" />
 
 - 关闭(不安全)  
     访问者到CF边缘网络以及CF边缘服务器到源站之间都采用http。
@@ -236,19 +237,19 @@ CF Tunnel 功能的简单介绍如下：
 
 将cloudflared部署在A上，那如果我们要发布web1.tangwudi.com的网站，只需要如下配置：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5cceadde7ca516e8ad06bdb67c8eba4c.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/5cceadde7ca516e8ad06bdb67c8eba4c.png" alt="image.png" width="1600" height="363" />
 
   
 B上的web2.tangwudi.com的网站配置如下，因为实际上CF是通过A上安装的cloudflared经网络去访问B，所以B的地址必须填192.168.100.2:81，如下图：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/0948a8b179c09761b8259f730b5a2058.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/0948a8b179c09761b8259f730b5a2058.png" alt="image.png" width="1600" height="363" />
 
 ---
 
 注1：B上看见发起`http://192.168.100.2:81`请求的源地址是A的地址192.168.100.1。  
 注2：使用Tunnel方式，相比公网IP回源更加灵活，比如：可以改变host以及一些连接方面的参数：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/1e1c6275d07d8871f9c7d1b8dbbbf8cb.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/1e1c6275d07d8871f9c7d1b8dbbbf8cb.png" alt="image.png" width="1600" height="363" />
 
   
 注3：不管任何场合，建站我都优先推荐采用Tunnel的方式：可以不用在意是不是有公网IP，是不是有合法的80和443端口，甚至不管是国内国外。  

@@ -9,6 +9,7 @@ authorid: aower
 ---
 
 import { BlogHeader } from '@/components/blog/BlogHeader'
+import Image from 'next/image'
 
 <BlogHeader />
 
@@ -20,7 +21,7 @@ import { BlogHeader } from '@/components/blog/BlogHeader'
 
 CF的整体方案是由一系列技术节点构成，访问请求在发往源服务器之前，CF的这些技术节点会按照事先规定的的命中判定优先级顺序对访问请求进行处理，这个命中判定优先级顺序就是流量序列，如下图：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e37bc4c260d4c899397aa1175dd77418.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/e37bc4c260d4c899397aa1175dd77418.png" alt="image.png" width="1600" height="363" />
 
   
 本篇文章就依照流量序列的顺序，简单介绍一些各个技术节点实现的功能。
@@ -37,7 +38,7 @@ CF的整体方案是由一系列技术节点构成，访问请求在发往源服
 
 ## 1、DDOS防护
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/cedd992c59513d53120d99c96fa64462.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/cedd992c59513d53120d99c96fa64462.png" alt="image.png" width="1600" height="363" />
 
 CF的DDoS 防护功能是一项关键的安全服务，旨在保护网站和网络免受分布式拒绝服务 (DDoS) 攻击。DDoS 攻击通过大量虚假流量淹没目标服务器，导致服务中断。CF 提供全面的 DDoS 防护，确保网站的可用性和性能。
 
@@ -65,7 +66,7 @@ CF DDoS 防护功能的简要介绍如下：
 
 ## URL重写
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/e7824e196b7e57ae721bf35a800911e9.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/e7824e196b7e57ae721bf35a800911e9.png" alt="image.png" width="1600" height="363" />
 
 注：URL 重写是指将用户请求的原始URL转换为另一个URL的过程，它通常用于服务器端，由Web服务器或应用程序框架处理(准确的说，是由服务器上的软件模块来完成，例如Apache的mod_rewrite模块、Nginx的rewrite指令、应用程序框架内置的URL重写功能)。
 
@@ -82,7 +83,7 @@ URL重写的主要目的包括：
 
 ## 页面规则
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/6a3a0c4029f9b109e3faa024599b7026.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/6a3a0c4029f9b109e3faa024599b7026.png" alt="image.png" width="1600" height="363" />
 
 CF的页面规则是用于管理和优化特定URL或路径的功能。通过页面规则，用户可以为其网站上的特定页面或路径设置不同的行为和优化策略，从而提高性能、安全性和用户体验(注：Free计划只支持3个页面规则)。
 
@@ -102,19 +103,19 @@ CF的页面规则是用于管理和优化特定URL或路径的功能。通过页
 
 ## Origin Rules
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/192d23255f7c8c5a10d609d41e4c3875.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/192d23255f7c8c5a10d609d41e4c3875.png" alt="image.png" width="1600" height="363" />
 
 CF 的 Origin Rules(源站规则)是用于在访问请求到达源服务器之前对其进行调整和优化的功能。根据请求的特定属性（例如URL路径、HTTP标头等）执行特定操作从而增强网站的性能、安全性和灵活性。
 
 不过，在Free计划中，Origin Rules仅能实现的唯一功能是修改回源服务器时的访问端口：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/0bdb7accd71482400b7a08e7caca737a.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/0bdb7accd71482400b7a08e7caca737a.png" alt="image.png" width="1600" height="363" />
 
 且也只在源服务器使用公网IP建站的时候才能用得到。我之前使用家庭宽带的公网IP建站的时候，因为没有80和443端口，所以使用了这个功能来将回源端口改为非标准端口，不过后来使用tunnel功能之后，这个功能我就用不上了(tunnel功能可以随意指定源服务器上的服务端口以及host等内容)。
 
 ## Cache Rules
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/cf82cbb932ef71e04f58d7a1f3781ae3.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/cf82cbb932ef71e04f58d7a1f3781ae3.png" alt="image.png" width="1600" height="363" />
 
 CF的Cache Rules(缓存规则)允许用户自定义如何缓存网站内容，以提高性能并减少源服务器负载。通过设置缓存规则，用户可以更精确地控制哪些内容被缓存、缓存的时长以及何时刷新缓存。
 
@@ -135,7 +136,7 @@ Cache Rules的常见用途如下：
 
 ## Configuration Rules
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/9e5d797507fdefe7a90f473eaf25131c.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/9e5d797507fdefe7a90f473eaf25131c.png" alt="image.png" width="1600" height="363" />
 
 CF的Configuration Rules(配置规则)允许用户根据访问请求的特定条件来动态地应用不同的配置设置。通过配置规则，用户可以在不影响整个网站的情况下，为特定的路径、URL、HTTP方法等应用定制化的设置，从而提高性能、安全性和灵活性。
 
@@ -148,19 +149,19 @@ Configuration Rules的常见用途如下：
 
 和Origin Rules吝啬的只能作用于回源请求的访问端口比起来，configuration Rules对访问请求能实现的功能就要多太多了，比如：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/4012e144f5daa16d474be7cd09704c25.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/4012e144f5daa16d474be7cd09704c25.png" alt="image.png" width="1600" height="363" />
 
 举个例子，我配置访问主机名包含"tangwudi.com"并且不等于"blog.tangwudi.com"的时候，将SSL的加密模式单独设置为"严格"方式(默认值是完全)，只需如下设置即可：  
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/13ee1cdc9af6e501a0670210a2372d79.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/13ee1cdc9af6e501a0670210a2372d79.png" alt="image.png" width="1600" height="363" />
 
   
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/ed470b3bea2ef890219ee3b63ad1d995.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/ed470b3bea2ef890219ee3b63ad1d995.png" alt="image.png" width="1600" height="363" />
 
 ## 重定向规则
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/27c56dc9b16205cbffaf0ea3fc57337f.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/27c56dc9b16205cbffaf0ea3fc57337f.png" alt="image.png" width="1600" height="363" />
 
 CF的重定向规则允许用户根据自定义条件将请求重定向到不同的URL。通过重定向规则，用户可以灵活地管理网站流量，优化用户体验，并确保SEO的有效性。
 
@@ -192,7 +193,7 @@ URL 重写（URL Rewriting）和 URL 重定向（URL Redirecting）虽然在概�
 
 ## IP访问规则
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b54fc4584d5b747ad2bdcdd82545a84e.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/b54fc4584d5b747ad2bdcdd82545a84e.png" alt="image.png" width="1600" height="363" />
 
 这里可以直接从IP地址层面上(可以是单独的IP地址、IP地址范围、国家/地区、ASN号)对访问请求设置对应的操作(阻止、允许、质询等)，还可以根据UserAgent(用户代理)阻止特定类型请求的访问。
 
@@ -200,7 +201,7 @@ URL 重写（URL Rewriting）和 URL 重定向（URL Redirecting）虽然在概�
 
 ## 自动程序
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/8d89bd7807a905c281d7cc6bfad372e4.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/8d89bd7807a905c281d7cc6bfad372e4.png" alt="image.png" width="1600" height="363" />
 
 CF的自动程序功能是一种智能安全措施，旨在检测并管理自动化流量，例如爬虫、机器人和其他自动程序。通过这些功能，CF可以帮助网站管理员区分人类用户和自动化流量，从而保护网站免受恶意活动的影响，同时确保合法的自动化程序可以正常访问。
 
@@ -210,7 +211,7 @@ CF自动程序功能的几个关键方面如下：
 2. **挑战和验证**：对于可疑的自动化流量，CF可以施加挑战，例如CAPTCHA验证，确保流量来源于真实用户而非恶意机器人。
 3. **速率限制**：CF可以设置速率限制规则，根据IP地址或其他标识符，限制每个用户在特定时间内的请求数量，从而防止爬虫或DDoS攻击。  
     
-    ![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/5cfb14d8ca764b731a38458409f2e690.png)
+    <Image src="https://cdn.professoryin.online/aower-gpt/2024/8/5cfb14d8ca764b731a38458409f2e690.png" alt="image.png" width="1600" height="363" />
     
 4. **自定义规则**：网站管理员可以自定义规则，以针对特定类型的自动化流量。例如，允许可信的搜索引擎爬虫访问，同时阻止未知或恶意的机器人，需要结合WAF功能实现。
 5. **分析和报告**：CF提供详细的流量分析和报告，帮助网站管理员了解自动化流量的来源和行为模式，从而调整安全策略。
@@ -225,25 +226,25 @@ CF WAF的主要功能和优势如下：
 
 1. **规则集**：CF WAF包含了大量预定义的安全规则集，涵盖了OWASP Top 10漏洞及其他常见威胁。这些规则集会定期更新，以应对最新的安全威胁：  
     
-    ![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/d118a10123b2fbe463b887d7a79e1f5e.png)
+    <Image src="https://cdn.professoryin.online/aower-gpt/2024/8/d118a10123b2fbe463b887d7a79e1f5e.png" alt="image.png" width="1600" height="363" />
     
 2. **自定义规则**：网站管理员可以创建自定义规则(Free计划有5条额度)，以满足特定的安全需求。例如，可以基于特定的URL路径、查询参数或HTTP标头来创建规则：  
     
-    ![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/0a255f1a31524dc024e8b9d397464b6b.png)
+    <Image src="https://cdn.professoryin.online/aower-gpt/2024/8/0a255f1a31524dc024e8b9d397464b6b.png" alt="image.png" width="1600" height="363" />
     
 3. **虚拟补丁**：在发现漏洞后，网站管理员可以立即应用虚拟补丁，而无需等待开发团队修复代码，从而快速阻止潜在攻击，实现方式是根据漏洞的原理使用WAF自定义规则进行防护。
 4. **防御高级攻击**：通过集成的机器学习和行为分析技术，CF WAF可以检测并阻止复杂和高级的攻击，如零日漏洞攻击，也是通过自定义规则实现。
 5. **Bot管理**：除了保护网站免受人类攻击者的威胁，CF WAF还可以识别和管理自动化流量，防止恶意爬虫和僵尸网络的攻击，需要自定义规则结合自动程序功能实现。
 6. **日志和监控**：WAF提供详细的攻击日志和实时监控，帮助网站管理员了解攻击来源和类型，并及时调整安全策略：  
     
-    ![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/eb9d435da965431543778d4ef3da1c57.png)
+    <Image src="https://cdn.professoryin.online/aower-gpt/2024/8/eb9d435da965431543778d4ef3da1c57.png" alt="image.png" width="1600" height="363" />
     
 
 具体的CF WAF功能介绍及详细配置教程参见： [家庭数据中心系列 cloudflare教程(四) CF WAF功能介绍及详细配置教程](https://blog.tangwudi.com/technology/homedatacenter12336/)
 
 ## 标头修改
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/b940180136a29b698239e244a0687122.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/b940180136a29b698239e244a0687122.png" alt="image.png" width="1600" height="363" />
 
 CF的标头修改功能允许网站管理员通过配置规则来添加、删除或修改 HTTP 请求和响应标头。
 
@@ -274,7 +275,7 @@ CF的标头修改功能允许网站管理员通过配置规则来添加、删除
 
 ## access(Zero Trust)
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/37e166de674ebab97cc4ad0d7a5b2feb.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/37e166de674ebab97cc4ad0d7a5b2feb.png" alt="image.png" width="1600" height="363" />
 
 注：自 2022 年 5 月 25 日起，Access 配置已移至 Zero Trust。
 
@@ -307,7 +308,7 @@ Zero Trust有优势如下：
 
 ## Workers路由
 
-![image.png](https://cdn.professoryin.online/aower-gpt/2024/8/adde030b8a0588e648acebb279cdc3c2.png)
+<Image src="https://cdn.professoryin.online/aower-gpt/2024/8/adde030b8a0588e648acebb279cdc3c2.png" alt="image.png" width="1600" height="363" />
 
 CF的Workers 路由是一种无服务器计算平台，允许开发者在全球范围内的 CF 边缘网络上运行 JavaScript 和 TypeScript 代码(这两种语言都是基于 V8 JavaScript 引擎运行的，V8 引擎是 Google Chrome 浏览器和 Node.js 的核心)，并且允许开发者基于特定的规则和条件将网络请求路由到不同的 Workers 脚本。通过这些路由规则，开发者可以实现对请求的精细化管理和处理，从而提高应用的灵活性和性能。
 
